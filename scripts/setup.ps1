@@ -3,17 +3,12 @@ param(
     [switch]$Codex
 )
 
+# 不传任何参数时，默认两个都配
 if (-not $Claude -and -not $Codex) {
-    Write-Host "用法: .\setup.ps1 [-Claude] [-Codex]"
-    Write-Host ""
-    Write-Host "  -Claude   配置 Claude Code skills"
-    Write-Host "  -Codex    配置 Codex CLI skills"
-    Write-Host ""
-    Write-Host "示例:"
-    Write-Host "  .\setup.ps1 -Claude          # 只配置 Claude Code"
-    Write-Host "  .\setup.ps1 -Codex           # 只配置 Codex"
-    Write-Host "  .\setup.ps1 -Claude -Codex   # 两个都配置"
-    exit 1
+    $Claude = $true
+    $Codex = $true
+    Write-Host "未指定参数，默认配置 Claude Code + Codex CLI"
+    Write-Host "（如只想配一个，请显式传 -Claude 或 -Codex）"
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot

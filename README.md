@@ -26,49 +26,52 @@ Vue 3 中后台门户工程前端开发标准，集中维护 Claude Code 和 Cod
 
 ```
 # Windows（推荐路径）
-git clone https://github.com/Hollelihanqi/vue-dev-standards.git E:\Dr\dev-standards
+git clone https://github.com/Hollelihanqi/vue-dev-standards.git E:\Dr\vue-dev-standards
 
 # Mac / Linux（推荐路径）
-git clone https://github.com/Hollelihanqi/vue-dev-standards.git ~/dev-standards
+git clone https://github.com/Hollelihanqi/vue-dev-standards.git ~/vue-dev-standards
 ```
 
 ### 第二步：根据你使用的工具运行配置脚本
 
-#### Windows（PowerShell）
+#### Windows（推荐：直接用 .bat）
 
 ```powershell
-# 进入仓库
-cd E:\Dr\dev-standards
+cd E:\Dr\vue-dev-standards
 
-# 只配置 Claude Code
-.\scripts\setup.ps1 -Claude
+# 不传参数：两个都配（最常用）
+.\scripts\setup.bat
 
-# 只配置 Codex CLI
-.\scripts\setup.ps1 -Codex
-
-# 两个都配置
-.\scripts\setup.ps1 -Claude -Codex
+# 只配某一个
+.\scripts\setup.bat -Claude
+.\scripts\setup.bat -Codex
 ```
 
-> 脚本使用 `mklink /J`（Junction）创建链接，**无需管理员权限**，也无需开启开发者模式。
+> `.bat` 已包装好 PowerShell 执行策略绕过，**双击 / cmd / PowerShell 都能直接跑**，不会被 ExecutionPolicy 拦截。
+> 链接方式用 `mklink /J`（Junction），无需管理员权限，无需开发者模式。
+
+如果偏好直接调 PowerShell 也行（遇 ExecutionPolicy 报错时加 `powershell -ExecutionPolicy Bypass -File` 前缀）：
+```powershell
+.\scripts\setup.ps1               # 不传参数：两个都配
+.\scripts\setup.ps1 -Claude       # 只配 Claude Code
+.\scripts\setup.ps1 -Codex        # 只配 Codex
+```
 
 #### Mac / Linux（Terminal）
 
 ```bash
 # 进入仓库
-cd ~/dev-standards
+cd ~/vue-dev-standards
 
 # 赋予脚本执行权限（首次）
 chmod +x scripts/setup.sh
 
-# 只配置 Claude Code
+# 不传参数：两个都配（最常用）
+./scripts/setup.sh
+
+# 只配某一个
 ./scripts/setup.sh --claude
-
-# 只配置 Codex CLI
 ./scripts/setup.sh --codex
-
-# 两个都配置
-./scripts/setup.sh --claude --codex
 ```
 
 ### 第三步：验证
@@ -82,7 +85,7 @@ chmod +x scripts/setup.sh
 ## 更新 skill
 
 ```bash
-cd E:\Dr\dev-standards   # 或 ~/dev-standards
+cd E:\Dr\vue-dev-standards   # 或 ~/vue-dev-standards
 git pull
 ```
 
@@ -109,12 +112,12 @@ Codex 专属的 `agents/openai.yaml` 放在 skill 目录内，Claude Code 不会
 ## 链接原理
 
 ```
-~/.claude/skills/vue-scaffold-app   ──junction──▶  E:\Dr\dev-standards\skills\vue-scaffold-app
-~/.claude/skills/vue-scaffold-module ──junction──▶  E:\Dr\dev-standards\skills\vue-scaffold-module
+~/.claude/skills/vue-scaffold-app   ──junction──▶  E:\Dr\vue-dev-standards\skills\vue-scaffold-app
+~/.claude/skills/vue-scaffold-module ──junction──▶  E:\Dr\vue-dev-standards\skills\vue-scaffold-module
 ...（共 5 条）
 
-~/.codex/skills/vue-scaffold-app   ──junction──▶  E:\Dr\dev-standards\skills\vue-scaffold-app
-~/.codex/skills/vue-scaffold-module ──junction──▶  E:\Dr\dev-standards\skills\vue-scaffold-module
+~/.codex/skills/vue-scaffold-app   ──junction──▶  E:\Dr\vue-dev-standards\skills\vue-scaffold-app
+~/.codex/skills/vue-scaffold-module ──junction──▶  E:\Dr\vue-dev-standards\skills\vue-scaffold-module
 ...（共 5 条）
 ```
 
@@ -124,12 +127,12 @@ Junction / symlink 对工具透明，工具读取 skills 目录时看到的与�
 
 ## 配置组合速查
 
-| 平台 | Claude Code | Codex CLI |
-|---|---|---|
-| **Windows** | `.\scripts\setup.ps1 -Claude` | `.\scripts\setup.ps1 -Codex` |
-| **Mac / Linux** | `./scripts/setup.sh --claude` | `./scripts/setup.sh --codex` |
+| 平台 | 默认（两个都配） | 只 Claude | 只 Codex |
+|---|---|---|---|
+| **Windows** | `.\scripts\setup.bat` | `.\scripts\setup.bat -Claude` | `.\scripts\setup.bat -Codex` |
+| **Mac / Linux** | `./scripts/setup.sh` | `./scripts/setup.sh --claude` | `./scripts/setup.sh --codex` |
 
-谁需要哪个工具就配哪个，两个都用就两个都配，互不影响。
+谁需要哪个工具就配哪个，两个都用就什么参数都不传，互不影响。
 
 ---
 
