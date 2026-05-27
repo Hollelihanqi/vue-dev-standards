@@ -15,19 +15,23 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $skillsDir = Join-Path $repoRoot "skills"
 $skills = Get-ChildItem $skillsDir -Directory | Select-Object -ExpandProperty Name
 
-function New-Junction {
+function New-SkillJunction {
     param([string]$Link, [string]$Target)
-    if (Test-Path $Link) {
-        $item = Get-Item $Link -Force -ErrorAction SilentlyContinue
-        if ($item -and $item.LinkType) {
-            Remove-Item $Link -Force
+    # 处理已存在的 link / 实体目录（含悬空 junction）
+    $existing = Get-Item -LiteralPath $Link -Force -ErrorAction SilentlyContinue
+    if ($existing) {
+        if ($existing.LinkType) {
+            # 已是 junction / symlink（无论是否悬空），直接删
+            [System.IO.Directory]::Delete($Link)
         }
         else {
-            Rename-Item $Link "$Link.bak"
-            Write-Host "  [备份] $(Split-Path $Link -Leaf) → $(Split-Path $Link -Leaf).bak"
+            # 实体目录，备份避免误删用户数据
+            Rename-Item -LiteralPath $Link -NewName "$($existing.Name).bak"
+            Write-Host "  [备份] $($existing.Name) → $($existing.Name).bak"
         }
     }
-    cmd /c mklink /J "`"$Link`"" "`"$Target`"" | Out-Null
+    # PowerShell 原生创建 junction，错误信息直观，且 5.0+ 无需管理员
+    New-Item -ItemType Junction -Path $Link -Target $Target -ErrorAction Stop | Out-Null
 }
 
 if ($Claude) {
@@ -36,7 +40,7 @@ if ($Claude) {
     Write-Host ""
     Write-Host "Claude Code  →  $claudeDir"
     foreach ($skill in $skills) {
-        New-Junction -Link (Join-Path $claudeDir $skill) -Target (Join-Path $skillsDir $skill)
+        New-SkillJunction -Link (Join-Path $claudeDir $skill) -Target (Join-Path $skillsDir $skill)
         Write-Host "  [✓] $skill"
     }
 }
@@ -47,7 +51,7 @@ if ($Codex) {
     Write-Host ""
     Write-Host "Codex CLI    →  $codexDir"
     foreach ($skill in $skills) {
-        New-Junction -Link (Join-Path $codexDir $skill) -Target (Join-Path $skillsDir $skill)
+        New-SkillJunction -Link (Join-Path $codexDir $skill) -Target (Join-Path $skillsDir $skill)
         Write-Host "  [✓] $skill"
     }
 }
