@@ -1,0 +1,7 @@
+interface:
+  display_name: "日报周报"
+  short_description: "生成并缓存中文日报周报"
+  default_prompt: "Use $daily-work-report to generate today's Chinese work report and update the cache."
+
+policy:
+  allow_implicit_invocation: true
