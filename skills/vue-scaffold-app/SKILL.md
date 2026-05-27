@@ -1,6 +1,6 @@
 ---
 name: vue-scaffold-app
-description: 从 0 到 1 搭建 Vue 3 + TS + Vite 中后台门户工程。当用户说"按这个 skill 起新 vue 项目"、"参考 portal 规范初始化新工程"、"按门户工程套路从 0 搭一个 vue 应用"、"用这套架构搭新项目"、"按统一规范初始化前端项目"等时使用。覆盖技术栈、目录结构、配置文件、axios 拦截、加密工具、composable 拆分、UnoCSS 用法、组件分层、路由守卫等完整工程规范。
+description: 从 0 到 1 搭建 Vue 3 + TS + Vite 中后台门户工程。当用户说"参考 portal 规范初始化新工程"、"按门户工程套路从 0 搭一个 vue 应用"、"按统一规范初始化前端项目"、"起个新 vue 工程"、"新建 vue 中后台项目"等时使用。覆盖技术栈、目录结构、配置文件、axios 拦截、加密工具、composable 拆分、UnoCSS 用法、组件分层、路由守卫等完整工程规范。
 user-invocable: true
 allowed-tools:
   - Bash
