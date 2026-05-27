@@ -227,24 +227,6 @@ export const logoutApi = () => {
 
 ---
 
-## src/api/portal.ts
-
-```ts
-import { request, requestWithLoading } from '@/utils/axios'
-import type { StatusOption } from '@/utils/portal'
-
-// 查询通用状态字典，用于列表筛选、状态展示等轻量配置项。
-export const getStatusOptions = (csePCode: string) => {
-  return request.post<StatusOption[]>('/xxx/anon/v1/status/data/searches', { csePCode })
-}
-
-export { request, requestWithLoading }
-```
-
-`request` / `requestWithLoading` 从这里 re-export，业务模块 `import from '@/api/portal'` 就能拿到（避免直接依赖 `@/utils/axios`）。
-
----
-
 ## src/router/index.ts
 
 ```ts

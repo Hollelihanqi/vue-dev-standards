@@ -648,9 +648,9 @@ const {
 
 ## src/system-views/register/
 
-注册页是**多字段表单 + 玻璃卡片 + StickyContainer 吸顶吸底**。**字段集与业务直接相关**（DDC 算力中心 / 营业执照等是 portal 专属），不强制要求所有项目都做。如目标项目不需要注册页，删除路由 + 文件即可。
+注册页是**多字段表单 + 玻璃卡片 + StickyContainer 吸顶吸底**。**字段集与具体业务强相关**（企业资质 / 行业身份 / 营业执照等都属于业务定制字段），不强制要求所有项目都做。如目标项目不需要注册页，删除路由 + 文件即可。
 
-如果需要：完整 reference 实现在 portal 项目的 `src/system-views/register/`（Register.vue ~ 200 行 + useRegister.ts ~ 300 行 + api.ts ~ 100 行），按目标项目的业务字段裁剪后引入。
+如果需要：参照下面的结构与关键约定从零写一份，字段按目标项目实际需求定义（一般 Register.vue ≤ 30 行 script setup，useRegister.ts 200~300 行，api.ts 按接口数量定）。
 
 结构：
 
@@ -679,7 +679,7 @@ src/system-views/register/
 
 简单版重置密码：账号 + 手机号 + 图形验证码 → 发送短信 → 短信验证码 + 新密码 → 提交。结构与登录页相似，单卡片，无分组；样式套用登录页的 SCSS 模板即可。
 
-完整 reference 实现在 portal 项目 `src/system-views/reset-password/`。
+按项目实际接口约定写 `api.ts`；`ResetPassword.vue` 复用登录页的玻璃卡片骨架，把 `useLogin` 换成 `useResetPassword`。
 
 ```
 src/system-views/reset-password/

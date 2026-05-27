@@ -3,7 +3,10 @@
 工具层是整个工程的"中枢"，三个文件决定了所有业务方的写法：
 - `axios.ts` —— 统一拦截、错误 toast、`Request` 类型，业务层不再判 code
 - `crypto.ts` —— RSA 分段加密，所有需要加密的接口共用
-- `portal.ts` —— 分页 / 字典 / 空值 / 下载等通用辅助
+- `common.ts` —— 真正与项目无关的通用辅助（空值占位等）
+- `rules.ts` —— Element Plus 表单校验规则统一收口
+
+> **不要预置分页 / 字典 / 文件下载工具**。这些与后端接口约定强绑定（`pageNum/pageSize` 还是 `current/size`、字典字段叫 `cseValue` 还是别的、下载是否要 `/api` 前缀等），每个项目情况都不一样，跟着开发过程沉淀，不要在脚手架里固化。
 
 ---
 
@@ -231,8 +234,8 @@ export const requestWithLoading = createRequestInstance(true)
 
 ```ts
 // api 文件：直接返回 Promise<T>
-export const getRoleList = (params: PageParams) =>
-  request.post<PageResult<Role>>('/xxx/role/list', params)
+export const getRoleList = (params: RoleListQuery) =>
+  request.post<{ items: Role[]; total: number }>('/xxx/role/list', params)
 
 // 业务层（不关心错误，靠拦截器 toast）：
 const data = await getRoleList(params)
@@ -244,6 +247,8 @@ try {
   if (e instanceof ApiError && e.code === 1001) { /* 自定义处理 */ }
 }
 ```
+
+> 上面 `RoleListQuery` 与返回结构 `{ items, total }` 是示意——分页字段命名按你们后端实际约定来；脚手架不预置 `PageParams` / `PageResult` 类型。
 
 `-1` / `-2` / `-3` 是后端约定的几种特殊业务码：
 - `-1` 系统异常（带 errorLogCode）
@@ -312,54 +317,12 @@ return request.post('/xxx/login', body.toString(), {
 
 ---
 
-## src/utils/portal.ts
+## src/utils/common.ts
+
+只放真正与具体后端 / 业务无关的工具。**不放分页封装、不放字典封装、不放下载封装**——这些都跟着项目里第一个用到它的模块再开始写，写在模块自己的 `api.ts` 里，等沉淀出稳定形态再考虑抽到 `common.ts` 或单独文件。
 
 ```ts
-export interface PageParams {
-  pageNum?: number
-  pageSize?: number
-  [key: string]: unknown
-}
-
-export interface PageResult<T> {
-  items: T[]
-  total: number
-}
-
-export interface StatusOption {
-  cseDesc: string
-  cseValue: string | number
-  csePCode?: string
-}
-
-// 将表格组件的扁平分页参数转换为后端统一的 page + data 结构。
-export const createPagePayload = (params: PageParams) => {
-  const { pageNum = 1, pageSize = 10, ...data } = params
-
-  return {
-    page: {
-      pageNum,
-      pageSize,
-    },
-    data,
-  }
-}
-
-// 兼容不同接口返回的分页字段，把后端 body 整理成表格可直接消费的数据结构。
-// 入参 body 是 axios 封装层已 unwrap 后的业务数据（即 ApiResponse.data）。
-export const pickPageResult = <T>(body: any): PageResult<T> => {
-  return {
-    items: Array.isArray(body?.data) ? body.data : Array.isArray(body?.items) ? body.items : [],
-    total: Number(body?.resultPageInfo?.total ?? body?.total ?? 0),
-  }
-}
-
-// 将后端字典数组转成 Map，便于列表渲染时快速把状态值翻译成文案。
-export const createOptionMap = (list: StatusOption[]) => {
-  return new Map(list.map(item => [String(item.cseValue), item.cseDesc]))
-}
-
-// 详情页空值统一显示占位符，避免页面出现 null、undefined 或空字符串。
+// 详情页 / 表格空值统一显示占位符，避免页面出现 null、undefined 或空字符串。
 export const formatEmpty = (value: unknown) => {
   if (value === null || value === undefined || value === '') {
     return '--'
@@ -367,32 +330,13 @@ export const formatEmpty = (value: unknown) => {
 
   return String(value)
 }
-
-// 通过隐藏 a 标签触发文件下载；相对接口地址会自动补上 /api 代理前缀。
-export const downloadByUrl = (url: string) => {
-  const link = document.createElement('a')
-  link.href = url.startsWith('/api') ? url : `/api${url}`
-  link.style.display = 'none'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
 ```
 
-### 使用约定
+### 不要预置的工具（按需在业务模块沉淀）
 
-```ts
-// 业务 api 标准分页写法
-export const getRoleList = async (params: PageParams) => {
-  const body = await request.post('/xxx/role/list', createPagePayload(params))
-  return pickPageResult<Role>(body)
-}
-
-// 字典处理
-const statusList = await getStatusOptions('PORTAL_XXX_STATUS')
-const statusMap = createOptionMap(statusList)
-// 然后在表格列里：formatText: row => statusMap.get(String(row.status)) || formatEmpty(row.status)
-```
+- **分页参数 / 返回的整理**：后端可能用 `{page: {pageNum, pageSize}, data}`，也可能用 `{current, size, ...params}`；返回的总数可能在 `resultPageInfo.total` 也可能在 `total`。这些约定不固定，**不要在脚手架里假设**。第一次接入分页接口时，在该模块的 `api.ts` 里直接组装 payload、直接 `pick` 出 `{ items, total }`。等项目里出现 2–3 个用法稳定的分页接口，再考虑下沉到 `common.ts`（命名按你们后端术语定）。
+- **字典选项 / Map 转换**：字典接口的字段名（`code/name` / `value/label` / 项目自定义命名）每个项目都不一样，等出现第一个字典需求再说；封装时放业务侧 `api.ts`，或抽到 `custom-components/` 下的字典 Select 组件里。
+- **文件相关（下载 / 读图为 dataURL / 文件大小格式化等）**：需要时**统一**收口到 `src/utils/file.ts`（一个文件，不要拆），脚手架不预置。下载是否要 `/api` 前缀、是否需要带 token、是否走 blob 流式下载，每个项目不同——等真正用到再写。
 
 ---
 
@@ -459,35 +403,18 @@ const rules = {
 
 ---
 
-## src/utils/file.ts
+## 不要建 `src/utils/index.ts`
+
+业务文件**直接** import 子文件：
 
 ```ts
-// 项目内常见的文件相关辅助函数；按需扩展。
-export const readImageAsDataURL = (file: File) => {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
-export const formatFileSize = (size: number) => {
-  if (!Number.isFinite(size) || size <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  const idx = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1)
-  return `${(size / Math.pow(1024, idx)).toFixed(idx === 0 ? 0 : 1)} ${units[idx]}`
-}
+import { request, requestWithLoading } from '@/utils/axios'
+import { encryptPayload } from '@/utils/crypto'
+import { formatEmpty } from '@/utils/common'
+import { required, phoneRule } from '@/utils/rules'
 ```
 
----
-
-## src/utils/index.ts
-
-```ts
-// 工具统一出口。
-// 不同模块的工具放到不同文件，这里只做 re-export，避免业务文件深度 import 路径。
-export * from './portal'
-export * from './crypto'
-export * from './file'
-```
+不预置 barrel 出口的原因：
+- `axios.ts` 里依赖 `@/store` / `@/router`，barrel 桶导出后任何 utils 引用都会顺带把 store / router 拖进来，容易触发循环依赖
+- 没 barrel 时 IDE 跳转更直观，bundle tree-shaking 也更准
+- 不同子工具（HTTP / 加密 / 通用辅助 / 校验规则）使用场景差异大，没必要凑到一个出口

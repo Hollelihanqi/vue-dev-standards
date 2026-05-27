@@ -1,6 +1,6 @@
 ---
 name: vue-scaffold-module
-description: 在已有 Vue 3 + TS 中后台门户工程内，按 vue-scaffold-app 规范添加一个新的业务模块（列表 + 详情 + 弹窗）。当用户说"加一个 xx 列表页"、"在项目里新增 xx 模块"、"按模板加 xx 业务页"、"按 portal 规范加 xx 管理页"、"新增一个 crud 页面"等时使用。生成模块四件套（api.ts / constants.tsx / use<Module>.ts / <Module>List.vue），自动接入 router、复用 pro-table / search-form，业务码统一走 axios 拦截器。
+description: 在已有 Vue 3 + TS 中后台工程内，按 vue-scaffold-app 规范添加一个新的业务模块（列表 + 详情 + 弹窗）。当用户说"加一个 xx 列表页"、"在项目里新增 xx 模块"、"按模板加 xx 业务页"、"按本套规范加 xx 管理页"、"新增一个 crud 页面"等时使用。生成模块四件套（api.ts / constants.tsx / use<Module>.ts / <Module>List.vue），自动接入 router、复用 pro-table / search-form，业务码统一走 axios 拦截器。
 user-invocable: true
 allowed-tools:
   - Bash
@@ -96,18 +96,18 @@ const handleEditSubmit = async (payload: PayloadType) => {
 
 - 用户说 "在 xx 项目里加一个角色管理模块"
 - 用户说 "新增一个 xx 列表页 / xx 管理页 / xx CRUD 页"
-- 主 skill `vue-scaffold-app` Step 7（添加第一个业务模块）调用本 skill
+- 主 skill `vue-scaffold-app` Step 8（添加第一个业务模块）调用本 skill
 
 ## 前置假设（不满足时报错）
 
 调用本 skill 前，目标项目应当已经具备：
 1. `src/components/pro-table` 通用增强表格（含 search-form 集成、分页、刷新）
 2. `src/utils/axios.ts` 拦截器收口（业务层 await 直接拿数据）
-3. `src/utils/portal.ts`（`PageParams` / `createPagePayload` / `pickPageResult`）
-4. `src/router/index.ts` 用 Layout 包业务页
-5. 至少一个已存在的业务模块（如 `src/views/example/`）作为风格参照 —— **如果项目里一个 module 都没有，先按主 skill 的 module-template 标准生成第一个，不要凭空创造风格**
+3. `src/router/index.ts` 用 Layout 包业务页
 
 如果上述任一不满足，提示用户先按 `vue-scaffold-app` 主 skill 完成基础设施搭建。
+
+> **分页参数 / 返回结构按各项目后端约定来**——脚手架不预置 `createPagePayload` / `pickPageResult`。本 skill 生成 `api.ts` 时如果项目里已经有同类封装就复用；没有就在该模块的 `api.ts` 里直接组装 payload、直接 pick `{ items, total }`，等项目里出现 2–3 个稳定用法再考虑下沉到 `utils/common.ts`。
 
 ## 输入参数
 
@@ -183,7 +183,7 @@ useNoticeDetail.ts     → 只导出 useNoticeDetail（详情）
 3. 项目里最新创建的模块（按 git log）
 
 读取以下文件并对齐其风格：
-- 该模块的 `api.ts` —— 看 request 用法、类型签名、`createPagePayload` 用法
+- 该模块的 `api.ts` —— 看 request 用法、类型签名、分页 payload / 返回结构的本项目约定
 - 该模块的 `constants.tsx` —— 看 search-form 控件类型、columns formatText / render 模式
 - 该模块的 `use<Module>.ts` —— 看 composable 返回结构、字典加载模式、handlexxx 方法命名
 - 该模块的 `<Module>List.vue` —— 看 template 中 pro-table 用法、dialog 挂载位置
@@ -195,28 +195,36 @@ useNoticeDetail.ts     → 只导出 useNoticeDetail（详情）
 **严格遵守**：
 - **函数名统一标准化**：`getList` / `getDetail` / `createItem` / `updateItem` / `deleteItem`，**不要加实体名前缀**（模块目录已经是命名空间了）
 - **不在 api.ts 里定义响应 Item 接口**：只定义"前端控制"的类型（payload / query）；响应行 / 详情的类型在使用处声明（见 Step 3）
-- 分页接口用 `createPagePayload` + `pickPageResult`
+- **分页 payload / 返回结构按本项目后端约定来**——脚手架不预置 `createPagePayload` / `pickPageResult`。如果项目里已经沉淀了同类封装就复用；没有就在本文件里直接组装、直接 pick `{ items, total }`
 - 写接口（create / update / delete / 重置等）用 `requestWithLoading`，读接口用 `request`
 - 加密接口（涉及密码 / 敏感字段）用 `encryptPayload(params)`
 - 调用方一律 `import * as api from './api'`，使用时 `api.getList(...)` / `api.createItem(...)`——模块名通过目录路径承载，函数名保持简短统一
 
 ```ts
 import { request, requestWithLoading } from '@/utils/axios'
-import { createPagePayload, pickPageResult, type PageParams } from '@/utils/portal'
 
 // 只定义"前端控制"的类型：query、payload
 export interface <EntityName>Query {
-  // 查询条件字段
+  pageNum?: number   // 分页字段按后端约定命名，可能是 current / page
+  pageSize?: number  // 也可能是 size / limit
+  // 其他查询条件字段
 }
 
 export interface <EntityName>Payload {
   // 创建 / 更新时传给后端的字段
 }
 
-// 列表查询：响应类型不写
-export const getList = async (params: <EntityName>Query & PageParams) => {
-  const body = await request.post('<api-prefix>/searches', createPagePayload(params))
-  return pickPageResult(body)
+// 列表查询：分页 payload / 返回字段按后端约定，下面是示意
+export const getList = async (params: <EntityName>Query) => {
+  const { pageNum = 1, pageSize = 10, ...data } = params
+  const body = await request.post<any>('<api-prefix>/searches', {
+    page: { pageNum, pageSize },
+    data,
+  })
+  return {
+    items: body?.data ?? body?.items ?? [],
+    total: Number(body?.resultPageInfo?.total ?? body?.total ?? 0),
+  }
 }
 
 // 详情
@@ -285,8 +293,8 @@ export const exportExcel = (params) => ...
 import { ElButton, ElPopconfirm, ElSpace, ElTag } from 'element-plus'
 
 import type { <EntityName>Payload } from './api'
-// 业务下拉示例（按需引入）：
-// import PortalChainFrameworkSelect from '@/custom-components/PortalChainFrameworkSelect'
+// 业务下拉示例（按需引入，组件名按项目前缀自定）：
+// import <Prefix>CategorySelect from '@/custom-components/<Prefix>CategorySelect'
 
 export const create<EntityName>SearchForm = () => [
   {
@@ -297,9 +305,9 @@ export const create<EntityName>SearchForm = () => [
   },
   // 业务下拉用 render + 封装组件
   // {
-  //   field: 'opbChainId',
-  //   label: '开放联盟链框架',
-  //   render: (model: any) => <PortalChainFrameworkSelect v-model={model.value} />,
+  //   field: 'categoryId',
+  //   label: '类别',
+  //   render: (model: any) => <<Prefix>CategorySelect v-model={model.value} />,
   // },
 ]
 

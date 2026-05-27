@@ -1,7 +1,7 @@
 # config-files —— 工程配置层完整模板
 
 替换占位符：
-- `<project-name>` → 实际包名（kebab-case，如 `my-portal`）
+- `<project-name>` → 实际包名（kebab-case，如 `my-admin`）
 - `<api-target>` → 后端基址（例如 `http://<backend-host>:<port>/`），多套环境用不同 `.env.*` 文件
 - `<primary-color>` → 主色（默认 `#0054a7`）
 - `<service-a>` / `<service-b>` → 实际后端服务路径前缀（按对接的 API gateway 路径来）

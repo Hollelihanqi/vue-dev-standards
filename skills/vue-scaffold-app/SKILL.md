@@ -1,6 +1,6 @@
 ---
 name: vue-scaffold-app
-description: 从 0 到 1 搭建 Vue 3 + TS + Vite 中后台门户工程。当用户说"参考 portal 规范初始化新工程"、"按门户工程套路从 0 搭一个 vue 应用"、"按统一规范初始化前端项目"、"起个新 vue 工程"、"新建 vue 中后台项目"等时使用。覆盖技术栈、目录结构、配置文件、axios 拦截、加密工具、composable 拆分、UnoCSS 用法、组件分层、路由守卫等完整工程规范。
+description: 从 0 到 1 搭建 Vue 3 + TS + Vite 中后台工程。当用户说"按统一规范初始化前端项目"、"起个新 vue 工程"、"新建 vue 中后台项目"、"从 0 到 1 搭一个 vue 中后台"、"按本套标准初始化 vue 工程"等时使用。覆盖技术栈、目录结构、配置文件、axios 拦截、加密工具、composable 拆分、UnoCSS 用法、组件分层、路由守卫等完整工程规范，本 skill 自身即为规范来源，不依赖任何外部参考项目。
 user-invocable: true
 allowed-tools:
   - Bash
@@ -11,9 +11,9 @@ allowed-tools:
   - Grep
 ---
 
-# vue-scaffold-app — Vue 中后台门户工程脚手架
+# vue-scaffold-app — Vue 3 中后台工程脚手架
 
-按本 skill 给出的规范，从 0 到 1 初始化一个 Vue 3 中后台门户工程。目标是让任意业务方拿到第一天就能直接写功能页，不再重复造轮子，也不再每个人风格各异。
+按本 skill 给出的规范，从 0 到 1 初始化一个 Vue 3 中后台工程。本 skill 自身即为规范来源——所有目录结构、配置、工具、Layout、系统页规范都写在本文件与 `references/` 里，不需要也不应该参考任何外部项目。目标是让任意业务方拿到第一天就能直接写功能页，不再重复造轮子，也不再每个人风格各异。
 
 ## 何时使用本 skill
 
@@ -30,7 +30,7 @@ allowed-tools:
 
 | 子 skill | 何时调用 | 单独触发场景 |
 |---|---|---|
-| `vue-scaffold-module` | 主流程 Step 7（添加第一个业务模块） | 老项目里"加一个 xx 列表 / 详情页" |
+| `vue-scaffold-module` | 主流程 Step 8（添加第一个业务模块） | 老项目里"加一个 xx 列表 / 详情页" |
 | `vue-scaffold-component` | 业务下拉 / 状态字典需要复用时 | 老项目里"封装一个 xx 选择器" |
 
 更细的子 skill（如 `vue-scaffold-config` / `vue-scaffold-utils`）按需扩展；这两个一次性写完就不动，留在主 skill 内联即可。
@@ -40,7 +40,7 @@ allowed-tools:
 主流程涉及的配置 / 工具 / 路由 / 状态 / Layout 等一次性基础设施代码模板放在同级 `references/` 目录：
 
 - `references/config-files.md` —— `package.json` / `vite.config.ts` / `uno.config.ts` / `tsconfig*.json` / `.env` / `index.html`
-- `references/core-utils.md` —— `utils/axios.ts`（业务码统一处理）/ `utils/crypto.ts`（RSA 分段加密）/ `utils/portal.ts`（分页 / 字典 / 下载工具）
+- `references/core-utils.md` —— `utils/axios.ts`（业务码统一处理）/ `utils/crypto.ts`（RSA 分段加密）/ `utils/common.ts`（空值占位等通用辅助）/ `utils/rules.ts`（表单校验规则收口）
 - `references/router-store.md` —— `router/index.ts`（守卫 + 面包屑 + document.title）/ `store/index.ts` + `store/app.ts` + `store/auth.ts`
 - `references/layout-and-system-views.md` —— `Layout.vue` / `TheHeader.vue` / `TheMenu.vue` / `TheBreadcrumb.vue` / `useLayout.ts` 与 `system-views/login` `register` `reset-password` 全套
 
@@ -82,14 +82,13 @@ allowed-tools:
 ├── vite.config.ts            # 代理 + 插件 + alias
 └── src/
     ├── api/
-    │   ├── index.ts          # 仅放跨模块通用接口（logoutApi 等）
-    │   └── portal.ts         # 跨业务的字典查询，例如 getStatusOptions
+    │   └── index.ts          # 仅放跨模块通用接口（logoutApi 等）；模块内接口放各 views/<module>/api.ts
     ├── assets/
     │   ├── generated/        # 由 ep 主题插件生成的 css，禁止手改
     │   └── styles/           # 全局 reset / 基础样式
-    ├── components/           # 通用基础组件（pro-table / search-form / remote-search / sticky-container / text-ellipsis / table / pro-table 等）
+    ├── components/           # 通用基础组件（pro-table / search-form / remote-search / sticky-container / text-ellipsis / table 等）
     │                         # 靠 AppComponentsResolver 自动注册，template 直接用 <pro-table />，不需 import
-    ├── custom-components/    # 业务封装组件（如 PortalChainFrameworkSelect、状态 select 等）
+    ├── custom-components/    # 业务封装组件（远程下拉、状态 select、字典 select 等二次封装）
     │                         # 不自动注册，使用时显式 import from '@/custom-components/xxx'
     ├── directives/           # 自定义指令
     ├── layout/
@@ -114,9 +113,10 @@ allowed-tools:
     ├── utils/
     │   ├── axios.ts          # 拦截器统一收口业务码、错误 toast、loading
     │   ├── crypto.ts         # RSA 分段加密 + 共享公钥
-    │   ├── file.ts
-    │   ├── index.ts
-    │   └── portal.ts         # 分页 / 字典 / 空值占位 / 下载
+    │   ├── common.ts         # 真正通用的辅助（空值占位等）；分页 / 字典封装不放这里
+    │   └── rules.ts          # Element Plus 表单校验规则
+    │   # 不预置 utils/index.ts 桶导出，业务文件统一直接 import from '@/utils/axios' / '@/utils/common' 等
+    │   # 后续如出现文件相关工具（下载、转换、大小格式化），新建 utils/file.ts 收口，不要拆成多个小文件
     ├── views/                # 业务页面（全部走 Layout）
     │   └── <module-name>/
     │       ├── api.ts
@@ -158,70 +158,97 @@ allowed-tools:
 - ❌ 把 fetch / 原生 XHR 与 axios 实例混用 —— 全部走 `request` / `requestWithLoading`
 - ❌ 在 `views/` 直接放业务接口的硬编码 URL —— 接口集中在模块同目录 `api.ts`
 
-## 执行流程（从空目录到可运行的 hello world 业务页）
+## 执行流程（从 `pnpm create vite` 到可运行的 hello world 业务页）
 
 > 每一步用对应的 reference 文件作为复制源，**不要凭记忆抄代码**。
 
-### Step 1 — 初始化目录
+### Step 1 — 用官方脚手架起壳子
+
+先用 Vite 官方脚手架生成一个最小的 Vue + TS 项目壳：
+
+```bash
+pnpm create vite <project-name> --template vue-ts
+cd <project-name>
+```
+
+选项答疑（CLI 交互式提问时）：
+- Framework：`Vue`
+- Variant：`TypeScript`（**不要选 Customize / Router / Pinia 等附加选项**，本 skill 自带这些配置，让脚手架尽量保持最小骨架）
+
+生成完毕后，**删掉 Vite 默认的样例文件**，避免后续步骤跟模板冲突：
+
+```bash
+# 默认 demo 资源 —— 全删
+rm -rf src/assets src/components src/style.css
+rm -f src/App.vue src/main.ts public/vite.svg
+```
+
+保留 `index.html` / `package.json` / `tsconfig*.json` / `vite.config.ts` / `.gitignore` —— 这些会在 Step 2 被本 skill 的模板**覆盖**或合并依赖。
+
+### Step 2 — 建标准目录
 
 ```bash
 mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,directives,layout,router,store,system-views/{login,register,reset-password},types,utils,views}
 ```
 
-### Step 2 — 写配置文件
+### Step 3 — 覆盖配置文件
 
-按 `references/config-files.md` 写：
-1. `package.json`（依赖清单完整复制，包名替换）
-2. `tsconfig.json` / `tsconfig.app.json` / `tsconfig.node.json`
-3. `vite.config.ts`（含 alias / 插件 / 代理）
+按 `references/config-files.md` 用本 skill 规范**覆盖**脚手架默认产物：
+1. `package.json`（依赖清单完整复制，包名替换为 `<project-name>`；Vite 默认只有 `vue` + `vue-tsc`，需要补齐 element-plus / unocss / pinia / vue-router / jsencrypt 等全部依赖）
+2. `tsconfig.json` / `tsconfig.app.json` / `tsconfig.node.json`（开启 `noUnusedLocals` 等严格规范）
+3. `vite.config.ts`（覆盖默认版本，加 alias / 插件 / 代理）
 4. `uno.config.ts`（主题色 + shortcuts）
 5. `.env`（VITE_APP_TITLE / VITE_API_BASE_URL / VITE_API_TIMEOUT / VITE_RSA_PUBLIC_KEY）
 6. `.gitattributes`（跨平台换行符规范，**新项目首次提交时必加**，并执行一次 `git add --renormalize .`）
-7. `index.html`（`<title>%VITE_APP_TITLE%</title>`）
+7. `index.html`（覆盖默认 `<title>Vite + Vue + TS</title>` 为 `<title>%VITE_APP_TITLE%</title>`，并把 `<script src="/src/main.ts">` 保留）
 
-### Step 3 — 写核心工具
+### Step 4 — 写核心工具
 
 按 `references/core-utils.md` 写：
 - `src/utils/axios.ts` —— 含 `ApiError` 类、`Request` 接口、`request` / `requestWithLoading`
 - `src/utils/crypto.ts` —— `rsaEncryptChunks` + `encryptPayload`
-- `src/utils/portal.ts` —— `createPagePayload` / `pickPageResult` / `createOptionMap` / `formatEmpty` / `downloadByUrl`
+- `src/utils/common.ts` —— `formatEmpty` 等与业务/后端无关的通用辅助（**不要预置分页、字典封装**——它们与后端字段约定强绑定，按各项目沉淀；**文件相关的下载 / 转换 / 大小格式化等需要时统一收口到 `utils/file.ts`**，不预置、也不拆成多个小文件）
+- `src/utils/rules.ts` —— Element Plus 表单校验规则统一收口
+- **不要建 `src/utils/index.ts` 桶导出**——业务文件统一直接 `import from '@/utils/axios'` / `'@/utils/common'`，避免 barrel 引发的循环依赖与 tree-shaking 失效
 
-### Step 4 — 写 router / store
+### Step 5 — 写 router / store
 
 按 `references/router-store.md` 写：
 - `src/store/index.ts` + `app.ts` + `auth.ts`
 - `src/router/index.ts`（白名单 / 守卫 / 面包屑 / document.title）
-- `src/api/index.ts` + `src/api/portal.ts`
+- `src/api/index.ts` —— 仅放跨模块通用接口（如 `logoutApi`）；业务模块自己的接口写到 `src/views/<module>/api.ts`
 
-### Step 5 — 写 Layout 与 system-views
+### Step 6 — 写 Layout 与 system-views
 
 按 `references/layout-and-system-views.md` 写：
 - 整个 Layout 主框架
 - 登录 / 注册 / 重置密码三套 system-views（含 useLogin / useRegister 等 composable）
 
-### Step 6 — 写 components（通用基础组件）
+### Step 7 — 写 components（通用基础组件）
 
-**基础组件库不在本 skill 内嵌代码** —— 单个组件就几百行，全部贴到 reference 会显著拖慢加载与生成。这一步走"复用 + 抽包"的路线：
+`src/components/` 下放置工程通用的基础组件，本 skill 规定的目录结构与职责如下：
 
-1. **当前（最快）**：从已有同栈项目（如 portal）的 `src/components/` 整个目录复制到新项目，保持以下子目录结构：
-   ```
-   src/components/
-   ├── pro-table/           # 增强表格（分页 + 查询区集成 + 列配置 + 操作列）
-   ├── search-form/         # 查询表单（field+label+el 配置驱动，支持 render）
-   ├── remote-search/       # 远程下拉（url/labelKey/valueKey/dataCallback）
-   ├── sticky-container/    # 吸顶吸底容器（#header / #footer slot + 中间滚动）
-   ├── text-ellipsis/       # 文本省略 + tooltip
-   └── table/               # 基础 table（el-table 二次封装）
-   ```
-   导入路径相对独立（用 `@/components/...`），复制后无需改源码即可使用。
+```
+src/components/
+├── pro-table/           # 增强表格（分页 + 查询区集成 + 列配置 + 操作列）
+├── search-form/         # 查询表单（field+label+el 配置驱动，支持 render）
+├── remote-search/       # 远程下拉（url/labelKey/valueKey/dataCallback）
+├── sticky-container/    # 吸顶吸底容器（#header / #footer slot + 中间滚动）
+├── text-ellipsis/       # 文本省略 + tooltip
+└── table/               # 基础 table（el-table 二次封装）
+```
 
-2. **中期（推荐）**：基础组件抽成内部 npm 包（如 `@<your-org>/vue-components`），所有项目通过 `pnpm add` 引入，统一版本管理。
+导入路径统一用 `@/components/...`，通过 `AppComponentsResolver` 自动注册，模板里直接写 `<pro-table />`、`<search-form />` 等，不需要手动 import。
 
-3. **远期**：基础组件库自己也变成 skill 子项（`vue-scaffold-base-components`），按需挑选组件 + 自动生成 import。
+**组件代码获取方式（按推荐顺序）：**
 
-⚠️ **这一步不能跳过** —— 后续 `pro-table` / `search-form` / `remote-search` 是业务模块（`vue-scaffold-module`）和业务组件（`vue-scaffold-component`）的依赖底座。如果新项目脱离了 portal，建议先把这 6 个目录抽成内部包再启动新工程。
+1. **推荐**：使用内部 npm 包（如 `@<your-org>/vue-components`），`pnpm add` 后由 `AppComponentsResolver` 自动从包内解析，版本统一管理。
+2. **次选**：本 skill 后续会拆出 `vue-scaffold-base-components` 子 skill，按需逐个生成组件代码到 `src/components/`。
+3. **最后**：在内部包尚未沉淀的情况下，如果你的组织里已有同栈 Vue 3 + TS 项目实现了上述 6 个目录，可暂时复制源码过来——但**这是过渡方案**，最终目标是上面的内部包。
 
-### Step 7 — 添加第一个业务模块
+⚠️ **这一步不能跳过** —— `pro-table` / `search-form` / `remote-search` 是业务模块（`vue-scaffold-module`）和业务组件（`vue-scaffold-component`）的依赖底座。新项目必须先把基础组件落位，再进入 Step 8。
+
+### Step 8 — 添加第一个业务模块
 
 按 `references/module-template.md` 在 `src/views/<module>/` 新建四件套：
 
@@ -237,7 +264,7 @@ src/views/example/
 
 并在 `src/router/index.ts` 注册路由（路径 / name / meta.title 中文 / Layout 作为 component）。
 
-### Step 8 — 验证
+### Step 9 — 验证
 
 ```bash
 pnpm install
@@ -275,13 +302,13 @@ pnpm dev
 
 ## 业务下拉 / 状态字典如何下沉为组件
 
-参考 `src/custom-components/PortalChainFrameworkSelect.tsx` 范式：
+范式（详见子 skill `vue-scaffold-component`）：
 - 包一层 `RemoteSearch`，固定 `url` / `labelKey` / `valueKey`
-- 默认 `dataCallback` 做项目级过滤（例如只保留某条链）
+- 默认 `dataCallback` 做项目级过滤（例如只保留某条业务线下的选项）
 - 透传 `context.attrs`，允许调用方覆盖默认行为
-- 调用方 `<PortalXxxSelect v-model="..." />` 一行搞定，不再写 `loadXxx` / `xxxOptions` ref
+- 调用方 `<<Prefix>XxxSelect v-model="..." />` 一行搞定，不再写 `loadXxx` / `xxxOptions` ref
 
-详细见 `references/component-conventions.md`。
+调起 `vue-scaffold-component` 子 skill 自动按上面范式生成 `src/custom-components/<ComponentName>.tsx`。
 
 ## CSS 风格
 
