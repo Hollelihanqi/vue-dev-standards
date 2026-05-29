@@ -51,6 +51,14 @@ const {
 
 ## src/layout/Main.vue
 
+> **KeepAlive 策略由项目自己决定，规范不作硬性要求**。两种写法都可接受：
+> 1. **`:include` 白名单**（下面 A 方案）—— 遍历 `router.getRoutes()` 把 `meta.keepAlive` 为 true 的 `name` 收成数组，喂给 `<keep-alive :include>`；集中控制
+> 2. **`v-if` 条件分支**（下面 B 方案）—— `<keep-alive v-if="route.meta.keepAlive">` + `<router-view v-else>`，显式分流
+>
+> A 方案集中、B 方案显式，没有哪个"更规范"——按项目偏好选一个就好。下面同时给出两种写法作为参考。
+
+### A 方案：`:include` 白名单
+
 ```vue
 <template>
   <main class="layout-main flex-1 min-h-0 overflow-auto bg-[#f3f6fa] p-4">
@@ -75,6 +83,28 @@ const keepAliveNames = computed(() => {
     .filter(item => item.meta?.keepAlive && typeof item.name === 'string')
     .map(item => item.name as string)
 })
+</script>
+```
+
+### B 方案：`v-if` 条件分支
+
+```vue
+<template>
+  <main class="layout-main flex-1 min-h-0 overflow-auto bg-[#f3f6fa] p-4">
+    <router-view v-slot="{ Component, route }">
+      <keep-alive v-if="route.meta?.keepAlive">
+        <component :is="Component" :key="String(routeReloadTokens[route.path] || 0)" />
+      </keep-alive>
+      <component v-else :is="Component" :key="String(routeReloadTokens[route.path] || 0)" />
+    </router-view>
+  </main>
+</template>
+
+<script setup lang="ts">
+import { useAppStore } from '@/store/app'
+
+const appStore = useAppStore()
+const routeReloadTokens = computed(() => appStore.routeReloadTokens)
 </script>
 ```
 
@@ -307,7 +337,7 @@ src/system-views/<page>/
 ### api.ts
 
 ```ts
-import { request } from '@/utils/axios'
+import { request } from '@/utils/request'
 import { encryptPayload } from '@/utils/crypto'
 
 interface LoginParams {

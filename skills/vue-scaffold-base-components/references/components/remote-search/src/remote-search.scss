@@ -1,0 +1,9 @@
+.cus-temp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.el-form-label-dis .el-form-item__label {
+  pointer-events: none; /* 禁用鼠标事件 */
+}

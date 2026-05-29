@@ -30,6 +30,7 @@ allowed-tools:
 
 | 子 skill | 何时调用 | 单独触发场景 |
 |---|---|---|
+| `vue-scaffold-base-components` | 主流程 Step 7（没有内部 npm 包时） | 老项目里"把 6 个基础组件拷过来" |
 | `vue-scaffold-module` | 主流程 Step 8（添加第一个业务模块） | 老项目里"加一个 xx 列表 / 详情页" |
 | `vue-scaffold-component` | 业务下拉 / 状态字典需要复用时 | 老项目里"封装一个 xx 选择器" |
 
@@ -40,7 +41,7 @@ allowed-tools:
 主流程涉及的配置 / 工具 / 路由 / 状态 / Layout 等一次性基础设施代码模板放在同级 `references/` 目录：
 
 - `references/config-files.md` —— `package.json` / `vite.config.ts` / `uno.config.ts` / `tsconfig*.json` / `.env` / `index.html`
-- `references/core-utils.md` —— `utils/axios.ts`（业务码统一处理）/ `utils/crypto.ts`（RSA 分段加密）/ `utils/common.ts`（空值占位等通用辅助）/ `utils/rules.ts`（表单校验规则收口）
+- `references/core-utils.md` —— `utils/request.ts`（业务码统一处理）/ `utils/crypto.ts`（RSA 分段加密）/ `utils/format.ts`（空值占位 / 日期格式化等显示型辅助）/ `utils/regx.ts`（正则常量 + 基于正则的 element-plus 表单校验 rules 收口）
 - `references/router-store.md` —— `router/index.ts`（守卫 + 面包屑 + document.title）/ `store/index.ts` + `store/app.ts` + `store/auth.ts`
 - `references/layout-and-system-views.md` —— `Layout.vue` / `TheHeader.vue` / `TheMenu.vue` / `TheBreadcrumb.vue` / `useLayout.ts` 与 `system-views/login` `register` `reset-password` 全套
 
@@ -91,6 +92,8 @@ allowed-tools:
     ├── custom-components/    # 业务封装组件（远程下拉、状态 select、字典 select 等二次封装）
     │                         # 不自动注册，使用时显式 import from '@/custom-components/xxx'
     ├── directives/           # 自定义指令
+    ├── hooks/                # 跨模块共享的 composable（如 usePermission / useDict）
+    │                         # 单模块专属的 composable 仍放在 views/<module>/use<Module>.ts，不进这里
     ├── layout/
     │   ├── Layout.vue        # 主框架（Header + Menu + Main + Breadcrumb）
     │   ├── Main.vue
@@ -110,15 +113,15 @@ allowed-tools:
     │   ├── register/
     │   └── reset-password/
     ├── types/                # 自动生成的 .d.ts（auto-imports / components）
-    ├── utils/
-    │   ├── axios.ts          # 拦截器统一收口业务码、错误 toast、loading
+    ├── utils/                # [S-utils-naming] 文件名白名单：request / crypto / format / regx / file（需要时新增）
+    │   ├── request.ts        # 拦截器统一收口业务码、错误 toast、loading（描述职责，不叫 axios.ts）
     │   ├── crypto.ts         # RSA 分段加密 + 共享公钥
-    │   ├── common.ts         # 真正通用的辅助（空值占位等）；分页 / 字典封装不放这里
-    │   └── rules.ts          # Element Plus 表单校验规则
-    │   # 不预置 utils/index.ts 桶导出，业务文件统一直接 import from '@/utils/axios' / '@/utils/common' 等
+    │   ├── format.ts         # 显示型格式化（空值占位 / 日期格式化等）；分页 / 字典封装不放这里
+    │   └── regx.ts           # 正则常量集合 + 基于正则的 element-plus 表单 rules
+    │   # [S-utils-barrel] 不预置 utils/index.ts 桶导出，业务文件统一直接 import from '@/utils/request' / '@/utils/format' 等
     │   # 后续如出现文件相关工具（下载、转换、大小格式化），新建 utils/file.ts 收口，不要拆成多个小文件
     ├── views/                # 业务页面（全部走 Layout）
-    │   └── <module-name>/
+    │   └── <module-name>/    # [S-module-quartet] 模块四件套：api / constants / use<Module> / <Module>List
     │       ├── api.ts
     │       ├── constants.tsx   # 表格列、search-form 控件配置
     │       ├── use<Module>.ts  # 业务 composable
@@ -130,33 +133,40 @@ allowed-tools:
     └── vite-env.d.ts
 ```
 
-**两个 system-views/views 分层是核心**：登录注册这类全屏页面**不进 Layout**，与业务页面用不同的视觉容器；这块千万别合并。
+**[S-system-views-split] 两个 system-views/views 分层是核心**：登录注册这类全屏页面**不进 Layout**，与业务页面用不同的视觉容器；这块千万别合并。
 
-## 十条不可违背的约定
+## 十二条不可违背的约定（R1–R12）
 
-1. **business code 收口**：axios 拦截器内 `code === 0` 直接返回 `data.data`，其它 code toast + `throw ApiError`。业务层 `await api()` 直接拿到数据，**禁止 `if (response.code === 0)`**。需要捕获时 `try { await api() } catch (e) {/* 已 toast */ }`。
-2. **composable 拆分**：每个业务模块必须有 `use<Module>.ts`，view 的 `<script setup>` **不超过 50 行**，只做"import composable + 解构 + icon"。
-3. **ref over reactive**：所有响应式数据用 `ref()`。`reactive` 只允许在极少数确实需要 deep 引用的场景使用（默认拒绝）。
-4. **加密集中**：RSA 公钥 / 分段算法 / 调用入口全部在 `utils/crypto.ts`；公钥从 `.env` 注入；其它文件不允许 `new JSEncrypt()`。
-5. **.env 收口**：应用标题、API 基址、超时、公钥、外部资源 URL 等所有可配置项都进 `.env`，禁止硬编码。
-6. **components vs custom-components**：通用原子组件（表格 / 搜索表单 / 远程下拉等）放 `src/components/`，由 `AppComponentsResolver` 自动注册，template 直接使用；业务封装（特定接口 / 特定字典 / 内置过滤）放 `src/custom-components/`，使用时显式 import。
-7. **UnoCSS 优先**：能用原子类完成的样式都用原子类（含 `!important` 前缀 `!h-[42px]`、伪类 `hover:!bg-white/10`、属性选择器 `[&_span]:!text-white` 等）。`<style scoped>` 只写**必须**用到的 element-plus 深度覆盖（`:deep(.el-input__wrapper)` 等）；禁止用 SCSS 实现可以用原子类解决的事。
-8. **路由 meta.title 直接中文**：除非项目强制启用 i18n，否则 meta.title 用中文字符串，不要塞 `MSGG0002` 这种 key。Layout 与 document.title 同步直接读 meta.title。
-9. **API 文件返回 T 不返回 AxiosResponse**：`request.post<UserInfo>(url)` 返回 `Promise<UserInfo>`。业务层 `const data = await getXxx()` 拿到的就是数据本身。这是拦截器收口的必然推论。
-10. **错误已 toast**：业务层 `catch` 块通常**空块**（仅放注释 `// 错误已由 axios 拦截器统一 toast`），不要再 `ElMessage.error(...)` 一次。`finally` 处理 `submitting.value = false` 等状态清理。
+> 这些编号是稳定 ID，被 `vue-scaffold-review` 报告引用。修改本节请保持编号不变。
 
-## 反模式（明确禁止）
+1. **[R1] business code 收口**：axios 拦截器内 `code === 0` 直接返回 `data.data`，其它 code toast + `throw ApiError`。业务层 `await api()` 直接拿到数据，**禁止 `if (response.code === 0)`**。需要捕获时 `try { await api() } catch (e) {/* 已 toast */ }`。
+2. **[R2] composable 拆分**：每个业务模块必须有 `use<Module>.ts`，view 的 `<script setup>` **不超过 50 行**，只做"import composable + 解构 + icon"。**跨模块**的 composable（权限判断、字典加载等通用 hook）统一放 `src/hooks/`，单模块的 composable 留在 `views/<module>/`，**不要混用**。Vue 圈子官方叫 "composable"，本项目目录名用 `hooks/`（更简短、与社区另一通行叫法一致），两个名字指同一种东西。
+3. **[R3] ref over reactive**：所有响应式数据用 `ref()`。`reactive` 只允许在极少数确实需要 deep 引用的场景使用（默认拒绝）。
+4. **[R4] 加密集中**：RSA 公钥 / 分段算法 / 调用入口全部在 `utils/crypto.ts`；公钥从 `.env` 注入；其它文件不允许 `new JSEncrypt()`。
+5. **[R5] .env 收口**：应用标题、API 基址、超时、公钥、外部资源 URL 等所有可配置项都进 `.env`，禁止硬编码。
+6. **[R6] components vs custom-components**：通用原子组件（表格 / 搜索表单 / 远程下拉等）放 `src/components/`，由 `AppComponentsResolver` 自动注册，template 直接使用；业务封装（特定接口 / 特定字典 / 内置过滤）放 `src/custom-components/`，使用时显式 import。
+7. **[R7] UnoCSS 优先**：能用原子类完成的样式都用原子类（含 `!important` 前缀 `!h-[42px]`、伪类 `hover:!bg-white/10`、属性选择器 `[&_span]:!text-white` 等）。`<style scoped>` 只写**必须**用到的 element-plus 深度覆盖（`:deep(.el-input__wrapper)` 等）；禁止用 SCSS 实现可以用原子类解决的事。
+8. **[R8] 路由 meta.title 直接中文**：除非项目强制启用 i18n，否则 meta.title 用中文字符串，不要塞 `MSGG0002` 这种 key。Layout 与 document.title 同步直接读 meta.title。
+9. **[R9] API 文件返回 T 不返回 AxiosResponse**：`request.post<UserInfo>(url)` 返回 `Promise<UserInfo>`。业务层 `const data = await getXxx()` 拿到的就是数据本身。这是拦截器收口的必然推论。
+10. **[R10] 错误已 toast**：业务层 `catch` 块通常**空块**（仅放注释 `// 错误已由 axios 拦截器统一 toast`），不要再 `ElMessage.error(...)` 一次。`finally` 处理 `submitting.value = false` 等状态清理。
+11. **[R11] store 模块禁止手动调 `localStorage`**：所有跨会话持久化通过 `defineStore` 第三参数的 `persist: { pick: [...] }` 配置（`pinia-plugin-persistedstate` 全局注册）。**不允许**出现 `localStorage.setItem(...)` / `localStorage.getItem(...)` / `localStorage.removeItem(...)` / `localStorage.clear()` 这类调用。退出登录用"in-memory state 重置"（`token.value = ''` 等），persistedstate 会自动把空值同步回 localStorage——不要用 `localStorage.clear()`，它会把跟登录态无关的偏好（语言 / 侧边栏 / 系统配置）一起误伤。
+12. **[R12] KeepAlive 策略不强制**：`Main.vue` 里 `<keep-alive>` 是用 `:include="keepAliveNames"` 白名单还是 `v-if="route.meta.keepAlive"` 条件分支，**由项目自己决定**，脚手架不作硬性要求。两种写法的取舍各有道理（白名单集中、分支显式），选择哪一种是项目内部的工程权衡，不属于"规范"层面。
 
-- ❌ `const formModel = reactive({...})` —— 改用 `ref`
-- ❌ `if (response.data?.code === 0)` —— 拦截器已经处理
-- ❌ `const PUBLIC_KEY = 'MIGfMA0...'` 散落各处 —— 用 `utils/crypto.ts` + `.env`
-- ❌ view 文件里写 200 行业务逻辑 —— 抽出 `use<Module>.ts`
-- ❌ `<style scoped>` 写一大堆自定义 class —— 改 UnoCSS 原子类 + element-plus 属性
-- ❌ 业务下拉手写 `el-select` + `loadXxxOptions` + ref 数组 —— 封装到 `custom-components/`
-- ❌ `meta.title: 'MSGG0002'` —— 直接 `meta.title: '登录'`
-- ❌ `import t from i18n` 后通篇 `t('PUB_xxx')` —— 中文项目直接写中文
-- ❌ 把 fetch / 原生 XHR 与 axios 实例混用 —— 全部走 `request` / `requestWithLoading`
-- ❌ 在 `views/` 直接放业务接口的硬编码 URL —— 接口集中在模块同目录 `api.ts`
+## 反模式（A1–A11，明确禁止）
+
+> 这些编号是稳定 ID，被 `vue-scaffold-review` 报告引用。修改本节请保持编号不变。
+
+- ❌ **[A1]** `const formModel = reactive({...})` —— 改用 `ref`
+- ❌ **[A2]** `if (response.data?.code === 0)` —— 拦截器已经处理
+- ❌ **[A3]** `const PUBLIC_KEY = 'MIGfMA0...'` 散落各处 —— 用 `utils/crypto.ts` + `.env`
+- ❌ **[A4]** view 文件里写 200 行业务逻辑 —— 抽出 `use<Module>.ts`
+- ❌ **[A5]** `<style scoped>` 写一大堆自定义 class —— 改 UnoCSS 原子类 + element-plus 属性
+- ❌ **[A6]** 业务下拉手写 `el-select` + `loadXxxOptions` + ref 数组 —— 封装到 `custom-components/`
+- ❌ **[A7]** `meta.title: 'MSGG0002'` —— 直接 `meta.title: '登录'`
+- ❌ **[A8]** `import t from i18n` 后通篇 `t('PUB_xxx')` —— 中文项目直接写中文
+- ❌ **[A9]** 把 fetch / 原生 XHR 与 axios 实例混用 —— 全部走 `request` / `requestWithLoading`
+- ❌ **[A10]** 在 `views/` 直接放业务接口的硬编码 URL —— 接口集中在模块同目录 `api.ts`
+- ❌ **[A11] store 里手动调 `localStorage.setItem(KEY, value)` / `localStorage.getItem(KEY)` / `localStorage.clear()`** —— 一律用 `defineStore(..., { persist: { pick: [...] } })` 走插件；退出清登录态用 in-memory state 重置，让 persistedstate 自动同步，不要 `localStorage.clear()` 误伤偏好
 
 ## 执行流程（从 `pnpm create vite` 到可运行的 hello world 业务页）
 
@@ -188,7 +198,7 @@ rm -f src/App.vue src/main.ts public/vite.svg
 ### Step 2 — 建标准目录
 
 ```bash
-mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,directives,layout,router,store,system-views/{login,register,reset-password},types,utils,views}
+mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,directives,hooks,layout,router,store,system-views/{login,register,reset-password},types,utils,views}
 ```
 
 ### Step 3 — 覆盖配置文件
@@ -205,11 +215,12 @@ mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,di
 ### Step 4 — 写核心工具
 
 按 `references/core-utils.md` 写：
-- `src/utils/axios.ts` —— 含 `ApiError` 类、`Request` 接口、`request` / `requestWithLoading`
+- `src/utils/request.ts` —— 含 `ApiError` 类、`Request` 接口、`request` / `requestWithLoading`。**文件名是 `request.ts` 而不是 `axios.ts`** —— 命名描述职责（"封装请求"），不绑定底层库；将来换 fetch / undici 文件名不变
 - `src/utils/crypto.ts` —— `rsaEncryptChunks` + `encryptPayload`
-- `src/utils/common.ts` —— `formatEmpty` 等与业务/后端无关的通用辅助（**不要预置分页、字典封装**——它们与后端字段约定强绑定，按各项目沉淀；**文件相关的下载 / 转换 / 大小格式化等需要时统一收口到 `utils/file.ts`**，不预置、也不拆成多个小文件）
-- `src/utils/rules.ts` —— Element Plus 表单校验规则统一收口
-- **不要建 `src/utils/index.ts` 桶导出**——业务文件统一直接 `import from '@/utils/axios'` / `'@/utils/common'`，避免 barrel 引发的循环依赖与 tree-shaking 失效
+- `src/utils/format.ts` —— `emptyText` / `formatDateTime` 等显示型格式化辅助（**不要预置分页、字典封装**——它们与后端字段约定强绑定，按各项目沉淀；**文件相关的下载 / 转换 / 大小格式化等需要时统一收口到 `utils/file.ts`**，不预置、也不拆成多个小文件）。**[S-utils-naming]** 禁用泛名 `common.ts` / `helpers.ts`——啥都能装 = 啥都不该装
+- `src/utils/regx.ts` —— 正则常量集合 + 基于正则的 element-plus 表单 rules。**[S-utils-naming]** 文件名是 `regx.ts` 而不是 `rules.ts` / `regex.ts` —— 团队约定的正则文件命名
+- **[S-utils-barrel]** 不要建 `src/utils/index.ts` 桶导出——业务文件统一直接 `import from '@/utils/request'` / `'@/utils/format'`，避免 barrel 引发的循环依赖与 tree-shaking 失效
+- **[S-views-root]** 不要在 `src/views/` 根目录建任何 `.ts` 文件（`shared.ts` / `common.ts` / `types.ts` 都不行）——views 根的直接子节点只能是菜单目录，跨菜单复用的函数下沉到 `utils/`，跨菜单复用的类型下沉到 `src/types/api.ts`
 
 ### Step 5 — 写 router / store
 
@@ -243,14 +254,14 @@ src/components/
 **组件代码获取方式（按推荐顺序）：**
 
 1. **推荐**：使用内部 npm 包（如 `@<your-org>/vue-components`），`pnpm add` 后由 `AppComponentsResolver` 自动从包内解析，版本统一管理。
-2. **次选**：本 skill 后续会拆出 `vue-scaffold-base-components` 子 skill，按需逐个生成组件代码到 `src/components/`。
-3. **最后**：在内部包尚未沉淀的情况下，如果你的组织里已有同栈 Vue 3 + TS 项目实现了上述 6 个目录，可暂时复制源码过来——但**这是过渡方案**，最终目标是上面的内部包。
+2. **次选**：触发 `/vue-scaffold-base-components` 子 skill，把 6 个基础组件源码 + 配套 directive 自动拷进 `src/components/` 与 `src/directives/`。
+3. **过渡方案**：如果你的组织里已有同栈 Vue 3 + TS 项目实现了上述 6 个目录，可暂时复制源码过来——但**这是过渡方案**，最终目标是上面的内部包。
 
 ⚠️ **这一步不能跳过** —— `pro-table` / `search-form` / `remote-search` 是业务模块（`vue-scaffold-module`）和业务组件（`vue-scaffold-component`）的依赖底座。新项目必须先把基础组件落位，再进入 Step 8。
 
 ### Step 8 — 添加第一个业务模块
 
-按 `references/module-template.md` 在 `src/views/<module>/` 新建四件套：
+调起 `/vue-scaffold-module` 子 skill 生成模块四件套（或直接读它的 SKILL.md 手工执行）：
 
 ```
 src/views/example/
@@ -326,7 +337,5 @@ pnpm dev
 - `references/core-utils.md`
 - `references/router-store.md`
 - `references/layout-and-system-views.md`
-- `references/module-template.md`
-- `references/component-conventions.md`
 
 按需打开对应 reference 文件，复制其中代码到目标项目，按项目名 / 接口名替换。**不要凭记忆**重写这些核心文件，差异会让后续协作非常痛苦。

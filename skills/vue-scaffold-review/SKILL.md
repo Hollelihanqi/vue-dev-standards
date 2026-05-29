@@ -1,0 +1,214 @@
+---
+name: vue-scaffold-review
+description: 按 vue-scaffold-app 规范对 Vue 3 中后台工程做合规审查。当用户说"按规范审一下代码"、"检查这个工程是否符合规范"、"审一下 xx 模块"、"vue 规范合规检查"、"扫一下违规"、"按本套标准审一下"等时使用。默认审当前分支增量改动，输出按严重程度分组的违规清单 + file:line + 规则引用 + 修复建议，写入工程 docs/code-review/ 目录。**只读不写**：本 skill 不修改任何业务代码，仅生成报告。
+user-invocable: true
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Glob
+  - Grep
+---
+
+# vue-scaffold-review — Vue 工程规范合规审查
+
+按 `vue-scaffold-app` 主 skill 定义的规范，扫描目标工程的代码，给出按严重程度分组的违规清单。本 skill **只读不写**——不会修改任何业务代码，只生成一份报告交给你看。修复永远由人决定。
+
+## 何时使用本 skill
+
+- 用户要求按规范审查代码（"按规范审一下"、"扫一下违规"、"检查合规"、"按本套标准检查"）
+- PR 合并前自检
+- 老项目接手时摸底其与规范的差距
+- 定期对一个模块 / 子工程做一次合规体检
+
+不要在以下场景使用：
+- 想做通用 code review（找 bug / 简化代码）—— 用内置 `/code-review`，那个负责正确性
+- 想测 UI 行为是否正确 —— 用 `/ui-test`，那个负责功能
+- 想搭新工程 / 加模块 —— 用 `vue-scaffold-app` / `vue-scaffold-module`
+
+## 设计原则
+
+### 1. 规范来源单一：永远读 vue-scaffold-app
+
+本 skill **不复制任何规则**。每次执行先 Read `<本仓库>/skills/vue-scaffold-app/SKILL.md` 与其 `references/*.md`，从中提取 `R1`–`R12`、`A1`–`A11`、`S-*` 编号的当前定义。
+
+主规范文档改了，本 skill 自动跟着改，**零同步成本**。
+
+### 2. 只读：不修改业务代码
+
+本 skill 不提供 `--fix` 选项。生成的报告里**只描述**违规与建议，**不动**用户代码。修复必须由人决定（哪些该改、改成什么、什么时候改）。
+
+写文件**仅限**目标工程的 `docs/code-review/<timestamp>.md` 报告本身。
+
+### 3. 三层检测分层
+
+| 层 | 检测手段 | 适用规则 |
+|---|---|---|
+| 第一层 | 机械 grep | A1–A11 反模式（正则一打就中） |
+| 第二层 | Glob + 文件名比对 | S-* 结构 / 命名规则 |
+| 第三层 | Read + 语义判断 | R1–R12 需要理解上下文的硬规则 |
+
+不同层用不同手段，**别一把梭**。第一层 1 秒出结果，第三层最慢但价值最高（linter 干不了）。
+
+## 输入识别
+
+| 模式 | 触发 | 范围 |
+|---|---|---|
+| **默认（增量）** | 不传额外参数 | `git diff` 本分支未合并到 main 的所有改动 + 未提交（含 staged 与 unstaged） |
+| **指定路径** | "审 src/views/role/" | 仅扫该路径下 `.vue` / `.ts` / `.tsx` |
+| **全量** | "审整个工程" 或 `--all` | 扫 `src/` 全部 |
+| **仅报告位置** | `--report-only` | 报告生成后不在 chat 里完整展示，只回报告路径 |
+
+默认走增量是因为最常见的场景是 **PR 前自检**——全量审一遍噪声大、执行慢，绝大多数情况下也不需要。
+
+未传参数时如果当前不在 git 仓库或 `git diff` 空，主动退回询问用户："要审整个 src/ 吗？"——别静默切到全量。
+
+## 执行流程
+
+### Step 1 — 读规范源
+
+```
+读取顺序：
+1. <本仓库>/skills/vue-scaffold-app/SKILL.md
+2. <本仓库>/skills/vue-scaffold-app/references/config-files.md
+3. <本仓库>/skills/vue-scaffold-app/references/core-utils.md
+4. <本仓库>/skills/vue-scaffold-app/references/router-store.md
+5. <本仓库>/skills/vue-scaffold-app/references/layout-and-system-views.md
+```
+
+从中提取：
+- R1–R12 的最新文字
+- A1–A11 的最新文字
+- S-* 的最新文字与所在锚点的具体约束
+
+> **本仓库路径解析**：本 skill 文件实际通过 junction / symlink 安装到 `~/.claude/skills/`，要找到原仓库可以：
+> 1. 优先看用户在对话中给过的仓库路径
+> 2. 否则尝试 `~/vue-dev-standards/` 与 Windows 上的 `E:/Dr/vue-dev-standards/`（默认推荐路径，README 有写）
+> 3. 都没有就明确询问用户仓库在哪
+
+### Step 2 — 圈定审查范围
+
+根据"输入识别"分支：
+
+- **默认增量**：
+  ```bash
+  git merge-base HEAD main
+  git diff --name-only $(git merge-base HEAD main)..HEAD
+  git status --porcelain | awk '{print $2}'   # 未提交
+  ```
+  合并去重，过滤出 `.vue` / `.ts` / `.tsx` 文件。
+
+- **指定路径**：`Glob` 命中 `<path>/**/*.{vue,ts,tsx}`。
+
+- **全量**：`Glob` 命中 `src/**/*.{vue,ts,tsx}`，排除 `node_modules` / `dist` / `src/types/`（自动生成的 d.ts）/ `src/assets/generated/`。
+
+把命中文件列出来（chat 里显示数量与示例 3–5 个文件名，避免刷屏）。
+
+### Step 3 — 第一层：机械 grep（A1–A11）
+
+按 `references/grep-patterns.md` 的清单逐条跑 `Grep`。每条规则带：
+- 正则
+- 排除条件（哪些文件 / 哪些目录不算违规）
+- 期望命中数（0 = 合规）
+
+实操：把所有 A* 规则的 Grep 调用**并行发**（同一条消息里多个 Grep tool call），一次拿全部命中。
+
+### Step 4 — 第二层：结构 / 命名（S-*）
+
+按 `references/semantic-checks.md` 中"结构层"一节：
+
+- `[S-utils-naming]` — `Glob src/utils/*.ts`，对照白名单 `[request, crypto, format, regx, file]`，命中其他名字（尤其 `common.ts` / `helpers.ts` / `rules.ts` / `regex.ts`）即违规
+- `[S-utils-barrel]` — 检查 `src/utils/index.ts` 是否存在
+- `[S-views-root]` — `Glob src/views/*.ts`，命中即违规
+- `[S-module-quartet]` — 每个 `src/views/<m>/`，检查是否齐 `api.ts` + `constants.tsx` + `use<M>.ts` + `<M>List.vue`（缺则告警，但允许 `<m>` 是分组目录，需结合是否存在 `<X>List.vue` 判断）
+- `[S-system-views-split]` — `Glob src/system-views/`，未存在告警；登录 / 注册 / 重置密码在 `views/` 下而非 `system-views/` 也告警
+
+### Step 5 — 第三层：语义判断（R1–R12）
+
+按 `references/semantic-checks.md` 中"语义层"一节：
+
+逐条 Read 命中文件，按规则定义判断。重点：
+- **R2** 行数：解析 `.vue` 文件的 `<script setup>` 段，计算非空非注释行数，超 50 即违规
+- **R2** composable 拆分：检查 `views/<m>/` 是否存在 `use<M>.ts`；不存在但 `<M>List.vue` 有 >30 行业务逻辑即违规
+- **R6** components 归属：Read `src/components/*` 与 `src/custom-components/*`，按"是否依赖具体业务 API / 字典"判断归属是否正确
+- **R7** UnoCSS 优先：Read `.vue` 的 `<style scoped>`，统计行数与是否在做"可用原子类替代"的事
+- **R10** 错误已 toast：Grep `catch.*ElMessage\.error` 找疑似双重 toast，再 Read 上下文确认
+
+这一层执行慢，给用户进度反馈（"读 12/47 个文件..."）。
+
+### Step 6 — 汇总报告
+
+按 `references/report-template.md` 渲染。报告写到目标工程：
+
+```
+<目标工程>/docs/code-review/<yyyy-MM-dd-HHmm>.md
+```
+
+不存在则创建目录。**不**污染工程根。
+
+报告中每条违规固定四要素：
+1. **位置**：`file:line`
+2. **违规内容**：原文片段
+3. **规则引用**：`[R3]` / `[A5]` / `[S-utils-naming]`，并在报告底部给一份"规则速查表"列出每个引用的完整文字（避免读者跳到原 SKILL.md）
+4. **修复建议**：自然语言描述，不写代码
+
+报告头部摘要：
+- 🔴 严重数 / 🟡 警告数 / 🟢 建议数
+- 合规率：(总规则数 - 违规规则数) / 总规则数
+
+### Step 7 — 退出
+
+- 🔴 数 = 0 → chat 里回 "合规通过 ✅" + 报告路径
+- 🔴 数 > 0 → chat 里给摘要 + 报告路径 + 提示"违规需人工修复"
+- `--report-only` 模式只回路径，不展示摘要
+
+**禁止**：不要在 chat 里把整份报告复制贴出来，会把对话刷爆——给路径即可。
+
+## 严重程度分级
+
+| 级别 | 含义 | 包含规则 |
+|---|---|---|
+| 🔴 严重 | 反模式 / 不可违背 | A1–A11、R1 / R3 / R4 / R5 / R9 / R10 / R11、`[S-utils-barrel]`、`[S-views-root]` |
+| 🟡 警告 | 结构 / 命名 / 强建议 | R2 / R6 / R8、`[S-utils-naming]`、`[S-module-quartet]`、`[S-system-views-split]` |
+| 🟢 建议 | 风格 / 取舍 | R7、R12 |
+
+`R12`（KeepAlive 策略）规范本身说"不强制"，所以本 skill 永远归类为 🟢，且只在用户**两种策略混用**时才告警。
+
+## 输出位置
+
+```
+<目标工程>/docs/code-review/<yyyy-MM-dd-HHmm>.md
+```
+
+- 时间戳精确到分钟，便于多次审查归档对比
+- 默认创建 `docs/code-review/.gitkeep` 让目录可入 git
+- 报告本身**不强制入 git**，由用户决定（建议入 git 便于回溯，但不动 `.gitignore`）
+
+## 与其它 skill 的协作
+
+| 配合方 | 协作方式 |
+|---|---|
+| `vue-scaffold-module` | 它生成完模块后，用户可直接 `/vue-scaffold-review src/views/<new-module>/` 验收 |
+| `vue-scaffold-component` | 同上，验收 `src/custom-components/<NewComp>.tsx` |
+| `vue-scaffold-app` | 主规范文档，本 skill 完全依赖它定义 R/A/S 编号 |
+| 内置 `/code-review` | 跑完合规审查后建议用户再跑通用 review 找正确性 bug，两者互补 |
+| `ui-test` | 合规 ≠ 功能正确，建议两个都跑 |
+
+## 引用文件
+
+详细检测规则与报告骨架：
+- `references/grep-patterns.md` — 第一层 A1–A11 的全部 grep 规则
+- `references/semantic-checks.md` — 第二层 S-* 与第三层 R1–R12 的判断框架
+- `references/report-template.md` — 报告 markdown 骨架
+
+执行时按需打开对应 reference。
+
+## 退出标准（用于 CI 接入）
+
+虽然本 skill 不直接产生退出码，但报告头部固定写入：
+
+```
+合规结论: PASS | FAIL
+```
+
+`FAIL` 当且仅当 🔴 严重数 > 0。CI 脚本可 `grep "^合规结论: PASS"` 报告文件来判断。

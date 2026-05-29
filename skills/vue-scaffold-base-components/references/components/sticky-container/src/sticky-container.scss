@@ -1,0 +1,9 @@
+.staicky-w {
+  .el-scrollbar__wrap {
+    display: flex;
+    flex-direction: column;
+  }
+  .el-scrollbar__view {
+    flex: 1;
+  }
+}

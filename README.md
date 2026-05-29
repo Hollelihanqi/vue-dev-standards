@@ -11,8 +11,10 @@ Vue 3 中后台门户工程前端开发标准，集中维护 Claude Code 和 Cod
 | Skill | 触发方式 | 说明 |
 |---|---|---|
 | `vue-scaffold-app` | `/vue-scaffold-app` | 从 0 到 1 搭建 Vue 3 + TS + Vite 中后台门户工程 |
+| `vue-scaffold-base-components` | `/vue-scaffold-base-components` | 把 6 个基础组件（pro-table / search-form 等）+ 配套 directive 一次性拷进工程 |
 | `vue-scaffold-module` | `/vue-scaffold-module` | 在已有工程内添加业务模块（列表 / 弹窗 / 详情四件套） |
 | `vue-scaffold-component` | `/vue-scaffold-component` | 封装业务级自动加载组件（远程下拉 / 状态选择器等） |
+| `vue-scaffold-review` | `/vue-scaffold-review` | 按 vue-scaffold-app 规范对工程做合规审查，输出违规清单到 docs/code-review/ |
 | `daily-work-report` | `/daily-work-report` | 生成和维护中文日报、周报与日报缓存 |
 | `ui-test` | `/ui-test` | 对前端工程做 UI 自动化测试，覆盖所有按钮、表单、校验 |
 
@@ -114,11 +116,11 @@ Codex 专属的 `agents/openai.yaml` 放在 skill 目录内，Claude Code 不会
 ```
 ~/.claude/skills/vue-scaffold-app   ──junction──▶  E:\Dr\vue-dev-standards\skills\vue-scaffold-app
 ~/.claude/skills/vue-scaffold-module ──junction──▶  E:\Dr\vue-dev-standards\skills\vue-scaffold-module
-...（共 5 条）
+...（共 7 条）
 
 ~/.codex/skills/vue-scaffold-app   ──junction──▶  E:\Dr\vue-dev-standards\skills\vue-scaffold-app
 ~/.codex/skills/vue-scaffold-module ──junction──▶  E:\Dr\vue-dev-standards\skills\vue-scaffold-module
-...（共 5 条）
+...（共 7 条）
 ```
 
 Junction / symlink 对工具透明，工具读取 skills 目录时看到的与普通目录无异。`git pull` 更新仓库内容后，链接自动指向最新版，无需任何额外操作。

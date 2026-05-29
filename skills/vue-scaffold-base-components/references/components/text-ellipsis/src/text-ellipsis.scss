@@ -1,0 +1,9 @@
+.text-ellipsis {
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.text-ellipsis__action {
+  cursor: pointer;
+  color: var(--el-color-primary);
+}

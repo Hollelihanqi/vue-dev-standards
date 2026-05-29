@@ -1,16 +1,20 @@
 # core-utils —— 工具层完整模板
 
-工具层是整个工程的"中枢"，三个文件决定了所有业务方的写法：
-- `axios.ts` —— 统一拦截、错误 toast、`Request` 类型，业务层不再判 code
+工具层是整个工程的"中枢"，几个文件决定了所有业务方的写法：
+- `request.ts` —— 统一拦截、错误 toast、`Request` 类型，业务层不再判 code（**文件名描述职责，不叫 `axios.ts`** —— 将来换底层实现文件名不变）
 - `crypto.ts` —— RSA 分段加密，所有需要加密的接口共用
-- `common.ts` —— 真正与项目无关的通用辅助（空值占位等）
-- `rules.ts` —— Element Plus 表单校验规则统一收口
+- `format.ts` —— 显示型格式化辅助（空值占位 / 日期格式化等）。**禁用泛名 `common.ts` / `helpers.ts`**
+- `regx.ts` —— 正则常量 + 基于正则的 Element Plus 表单 rules（**文件名 `regx.ts`，不是 `rules.ts` / `regex.ts`**，团队约定）
 
 > **不要预置分页 / 字典 / 文件下载工具**。这些与后端接口约定强绑定（`pageNum/pageSize` 还是 `current/size`、字典字段叫 `cseValue` 还是别的、下载是否要 `/api` 前缀等），每个项目情况都不一样，跟着开发过程沉淀，不要在脚手架里固化。
 
+> **跨菜单复用的类型放 `src/types/api.ts`，不放 utils**。utils 只放函数 / 常量，不放类型定义。
+
+> **`src/views/` 根目录不允许出现任何 `.ts` 文件**（`shared.ts` / `common.ts` / `types.ts` 都不行）。views 根的直接子节点只能是菜单目录；跨菜单复用的函数下沉到 `utils/`，跨菜单复用的类型下沉到 `src/types/api.ts`。
+
 ---
 
-## src/utils/axios.ts
+## src/utils/request.ts
 
 ```ts
 import axios, { AxiosHeaders, type AxiosError, type AxiosInstance, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
@@ -248,7 +252,7 @@ try {
 }
 ```
 
-> 上面 `RoleListQuery` 与返回结构 `{ items, total }` 是示意——分页字段命名按你们后端实际约定来；脚手架不预置 `PageParams` / `PageResult` 类型。
+> 上面 `RoleListQuery` 与返回结构 `{ items, total }` 是示意——分页字段命名按你们后端实际约定来；脚手架不预置 `PageParams` 类型。如果要预置 `PageResult` 这种**真正通用的形态约定**，放 `src/types/api.ts`，不放 utils。
 
 `-1` / `-2` / `-3` 是后端约定的几种特殊业务码：
 - `-1` 系统异常（带 errorLogCode）
@@ -256,6 +260,8 @@ try {
 - `-3` 未授权（自动登出）
 
 如果你的后端约定不同，**只改 switch 分支**，不动整体结构。
+
+> **认证方式**：上面模板包含了 `authStore.token` 注入 `token` header 的写法，**仅适用于后端真正返回 token 的项目**。如果后端是 cookie session（登录响应无 token 字段），直接删除请求拦截器里的 token 注入与 auth store 里的 token 字段，`isLogin` 只判 `userInfo` 即可。
 
 ---
 
@@ -317,65 +323,91 @@ return request.post('/xxx/login', body.toString(), {
 
 ---
 
-## src/utils/common.ts
+## src/utils/format.ts
 
-只放真正与具体后端 / 业务无关的工具。**不放分页封装、不放字典封装、不放下载封装**——这些都跟着项目里第一个用到它的模块再开始写，写在模块自己的 `api.ts` 里，等沉淀出稳定形态再考虑抽到 `common.ts` 或单独文件。
+显示型格式化辅助（"把数据转成可显示形态"）。**禁用泛名 `common.ts` / `helpers.ts`** —— 啥都能装 = 啥都不该装。
+
+下面是常见的两个示例：空值占位 + 日期时间格式化。**实际放哪些函数按项目需要来**，脚手架不强制要求 `emptyText` 和 `formatDateTime` 都得出现 —— 项目里如果只需要空值占位，那 format.ts 只导 `emptyText` 也行；如果还要日期 / 金额 / 百分比格式化，按需追加即可。
 
 ```ts
 // 详情页 / 表格空值统一显示占位符，避免页面出现 null、undefined 或空字符串。
-export const formatEmpty = (value: unknown) => {
+export const emptyText = (value: unknown) => {
   if (value === null || value === undefined || value === '') {
     return '--'
   }
 
   return String(value)
 }
+
+// 通用日期时间格式化：'YYYY-MM-DD HH:mm:ss'，非法值降级返回原字符串。
+export const formatDateTime = (value: unknown) => {
+  if (!value) {
+    return '--'
+  }
+
+  const date = new Date(String(value))
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value)
+  }
+
+  const pad = (num: number) => `${num}`.padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
 ```
 
 ### 不要预置的工具（按需在业务模块沉淀）
 
-- **分页参数 / 返回的整理**：后端可能用 `{page: {pageNum, pageSize}, data}`，也可能用 `{current, size, ...params}`；返回的总数可能在 `resultPageInfo.total` 也可能在 `total`。这些约定不固定，**不要在脚手架里假设**。第一次接入分页接口时，在该模块的 `api.ts` 里直接组装 payload、直接 `pick` 出 `{ items, total }`。等项目里出现 2–3 个用法稳定的分页接口，再考虑下沉到 `common.ts`（命名按你们后端术语定）。
+- **分页参数 / 返回的整理**：后端可能用 `{page: {pageNum, pageSize}, data}`，也可能用 `{current, size, ...params}`；返回的总数可能在 `resultPageInfo.total` 也可能在 `total`。这些约定不固定，**不要在脚手架里假设**。第一次接入分页接口时，在该模块的 `api.ts` 里直接组装 payload、直接 `pick` 出 `{ items, total }`。等项目里出现 2–3 个用法稳定的分页接口，再考虑下沉（命名按你们后端术语定）。
 - **字典选项 / Map 转换**：字典接口的字段名（`code/name` / `value/label` / 项目自定义命名）每个项目都不一样，等出现第一个字典需求再说；封装时放业务侧 `api.ts`，或抽到 `custom-components/` 下的字典 Select 组件里。
 - **文件相关（下载 / 读图为 dataURL / 文件大小格式化等）**：需要时**统一**收口到 `src/utils/file.ts`（一个文件，不要拆），脚手架不预置。下载是否要 `/api` 前缀、是否需要带 token、是否走 blob 流式下载，每个项目不同——等真正用到再写。
 
 ---
 
-## src/utils/rules.ts
+## src/utils/regx.ts
 
-Element Plus 表单校验规则统一收口。**所有表单字段，不管必填还是非必填，都必须带 pattern/validator 规则，在 blur 时触发，确保输入合法性。**
+正则常量集合 + 基于正则的 Element Plus 表单 rules。**文件名 `regx.ts` 是团队约定**，不要写成 `rules.ts` / `regex.ts`。**所有表单字段，不管必填还是非必填，都必须带 pattern/validator 规则，在 blur 时触发，确保输入合法性。**
 
 ```ts
 import type { FormItemRule } from 'element-plus'
 
+// 1. 纯正则常量 —— 可独立用于 String.prototype.match / 自定义 validator
+export const PHONE_REGX = /^1[3-9]\d{9}$/
+export const EMAIL_REGX = /^[\w.-]+@[\w.-]+\.\w+$/
+export const ID_CARD_REGX = /^\d{17}[\dXx]$/
+export const URL_REGX = /^https?:\/\/.+/
+export const INTEGER_REGX = /^\d+$/
+
+// 2. 基于正则的 Element Plus rules 工厂
 export const required = (message: string): FormItemRule =>
   ({ required: true, message, trigger: 'blur' })
 
 export const phoneRule: FormItemRule = {
-  pattern: /^1[3-9]\d{9}$/,
+  pattern: PHONE_REGX,
   message: '手机号格式不正确',
   trigger: 'blur',
 }
 
 export const emailRule: FormItemRule = {
-  pattern: /^[\w.-]+@[\w.-]+\.\w+$/,
+  pattern: EMAIL_REGX,
   message: '邮箱格式不正确',
   trigger: 'blur',
 }
 
 export const idCardRule: FormItemRule = {
-  pattern: /^\d{17}[\dXx]$/,
+  pattern: ID_CARD_REGX,
   message: '身份证号格式不正确',
   trigger: 'blur',
 }
 
 export const urlRule: FormItemRule = {
-  pattern: /^https?:\/\/.+/,
+  pattern: URL_REGX,
   message: 'URL 格式不正确',
   trigger: 'blur',
 }
 
 export const integerRule: FormItemRule = {
-  pattern: /^\d+$/,
+  pattern: INTEGER_REGX,
   message: '请输入正整数',
   trigger: 'blur',
 }
@@ -384,7 +416,7 @@ export const integerRule: FormItemRule = {
 ### 使用约定
 
 ```ts
-import { required, phoneRule, emailRule } from '@/utils/rules'
+import { required, phoneRule, emailRule } from '@/utils/regx'
 
 // 必填 + 正则：空值报"请输入"，有值报格式错误
 const rules = {
@@ -408,13 +440,15 @@ const rules = {
 业务文件**直接** import 子文件：
 
 ```ts
-import { request, requestWithLoading } from '@/utils/axios'
+import { request, requestWithLoading } from '@/utils/request'
 import { encryptPayload } from '@/utils/crypto'
-import { formatEmpty } from '@/utils/common'
-import { required, phoneRule } from '@/utils/rules'
+import { emptyText, formatDateTime } from '@/utils/format'
+import { required, phoneRule } from '@/utils/regx'
 ```
 
 不预置 barrel 出口的原因：
-- `axios.ts` 里依赖 `@/store` / `@/router`，barrel 桶导出后任何 utils 引用都会顺带把 store / router 拖进来，容易触发循环依赖
+- `request.ts` 里依赖 `@/store` / `@/router`，barrel 桶导出后任何 utils 引用都会顺带把 store / router 拖进来，容易触发循环依赖
 - 没 barrel 时 IDE 跳转更直观，bundle tree-shaking 也更准
-- 不同子工具（HTTP / 加密 / 通用辅助 / 校验规则）使用场景差异大，没必要凑到一个出口
+- 不同子工具（HTTP / 加密 / 格式化 / 正则规则）使用场景差异大，没必要凑到一个出口
+
+**`src/views/` 同理：根目录不允许出现任何 `.ts` 文件**（`shared.ts` / `common.ts` / `types.ts` 都不行）。views 根的直接子节点只能是菜单目录。
