@@ -11,6 +11,7 @@ Vue 3 中后台门户工程前端开发标准，集中维护 Claude Code 和 Cod
 | Skill | 触发方式 | 说明 |
 |---|---|---|
 | `vue-scaffold-app` | `/vue-scaffold-app` | 从 0 到 1 搭建 Vue 3 + TS + Vite 中后台门户工程 |
+| `vue-scaffold-layout` | `/vue-scaffold-layout` | 页面布局与高度契约规范（撑满不溢出、不出现"半截"、view 根节点、菜单宽度、操作列写法） |
 | `vue-scaffold-base-components` | `/vue-scaffold-base-components` | 把 6 个基础组件（pro-table / search-form 等）+ 配套 directive 一次性拷进工程 |
 | `vue-scaffold-module` | `/vue-scaffold-module` | 在已有工程内添加业务模块（列表 / 弹窗 / 详情四件套） |
 | `vue-scaffold-component` | `/vue-scaffold-component` | 封装业务级自动加载组件（远程下拉 / 状态选择器等） |

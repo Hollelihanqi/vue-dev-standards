@@ -11,7 +11,7 @@
 ```vue
 <template>
   <div class="layout-root flex h-screen w-screen overflow-hidden">
-    <aside class="layout-sider flex-shrink-0 h-full overflow-hidden bg-[#001f35] transition-all" :class="sidebarCollapsed ? 'w-16' : 'w-60'">
+    <aside class="layout-sider flex-shrink-0 h-full overflow-hidden bg-[#001f35] transition-all" :class="sidebarCollapsed ? 'w-16' : 'w-[220px]'">
       <TheMenu :routes="menuRoutes" :collapsed="sidebarCollapsed" />
     </aside>
 
@@ -51,6 +51,8 @@ const {
 
 ## src/layout/Main.vue
 
+> **布局类名与高度契约以 `vue-scaffold-layout` skill 为准**：`layout-main` 必须 `flex-1 overflow-hidden p-4 md:px-5`（吃掉剩余高度、自身禁止滚动），外层再包一个 `h-full w-full` + 圆角的高度容器把 `h-full` 透传给 view。需要滚动时由 view 内部的 `sticky-container` 负责，**绝不把 `layout-main` 改成 `overflow-auto`**。
+>
 > **KeepAlive 策略由项目自己决定，规范不作硬性要求**。两种写法都可接受：
 > 1. **`:include` 白名单**（下面 A 方案）—— 遍历 `router.getRoutes()` 把 `meta.keepAlive` 为 true 的 `name` 收成数组，喂给 `<keep-alive :include>`；集中控制
 > 2. **`v-if` 条件分支**（下面 B 方案）—— `<keep-alive v-if="route.meta.keepAlive">` + `<router-view v-else>`，显式分流
@@ -61,12 +63,14 @@ const {
 
 ```vue
 <template>
-  <main class="layout-main flex-1 min-h-0 overflow-auto bg-[#f3f6fa] p-4">
-    <router-view v-slot="{ Component, route }">
-      <keep-alive :include="keepAliveNames">
-        <component :is="Component" :key="String(routeReloadTokens[route.path] || 0)" />
-      </keep-alive>
-    </router-view>
+  <main class="layout-main flex-1 overflow-hidden p-4 md:px-5">
+    <div class="h-full w-full max-md:rounded-[0.875rem] max-md:p-3.5 md:rounded-[1rem]">
+      <router-view v-slot="{ Component, route }">
+        <keep-alive :include="keepAliveNames">
+          <component :is="Component" :key="String(routeReloadTokens[route.path] || 0)" />
+        </keep-alive>
+      </router-view>
+    </div>
   </main>
 </template>
 
@@ -90,13 +94,15 @@ const keepAliveNames = computed(() => {
 
 ```vue
 <template>
-  <main class="layout-main flex-1 min-h-0 overflow-auto bg-[#f3f6fa] p-4">
-    <router-view v-slot="{ Component, route }">
-      <keep-alive v-if="route.meta?.keepAlive">
-        <component :is="Component" :key="String(routeReloadTokens[route.path] || 0)" />
-      </keep-alive>
-      <component v-else :is="Component" :key="String(routeReloadTokens[route.path] || 0)" />
-    </router-view>
+  <main class="layout-main flex-1 overflow-hidden p-4 md:px-5">
+    <div class="h-full w-full max-md:rounded-[0.875rem] max-md:p-3.5 md:rounded-[1rem]">
+      <router-view v-slot="{ Component, route }">
+        <keep-alive v-if="route.meta?.keepAlive">
+          <component :is="Component" :key="String(routeReloadTokens[route.path] || 0)" />
+        </keep-alive>
+        <component v-else :is="Component" :key="String(routeReloadTokens[route.path] || 0)" />
+      </router-view>
+    </div>
   </main>
 </template>
 

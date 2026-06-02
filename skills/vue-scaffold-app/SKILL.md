@@ -30,6 +30,7 @@ allowed-tools:
 
 | 子 skill | 何时调用 | 单独触发场景 |
 |---|---|---|
+| `vue-scaffold-layout` | 写 `Layout.vue` / `Main.vue` 及任意 view 页面时（布局类名与高度契约的权威来源） | "页面有半截 / 不撑满 / 滚动条不对"、"菜单多宽"、"操作列宽度怎么写" |
 | `vue-scaffold-base-components` | 主流程 Step 7（没有内部 npm 包时） | 老项目里"把 6 个基础组件拷过来" |
 | `vue-scaffold-module` | 主流程 Step 8（添加第一个业务模块） | 老项目里"加一个 xx 列表 / 详情页" |
 | `vue-scaffold-component` | 业务下拉 / 状态字典需要复用时 | 老项目里"封装一个 xx 选择器" |

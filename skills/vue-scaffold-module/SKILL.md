@@ -312,7 +312,7 @@ export const exportExcel = (params) => ...
 - search-form 配置走 `field + label + el + props` 模式
 - 业务下拉（链 / 状态 / 用户类型 / 字典 select）**不要内嵌 `el: 'select' + options`**，**改用 `render` + 业务封装组件**（参考 `vue-scaffold-component` 子 skill 封装的下拉），由组件自请求数据
 - columns 用 `formatText` 处理简单字段映射，`render` 处理复杂渲染（标签 / 按钮组）
-- 操作列 `label: '操作'` + `fixed: 'right'`，用 `ElPopconfirm` 包裹危险操作
+- 操作列 `label: '操作'` + `fixed: 'right'`，**宽度用 `width`（固定锁死）不要用 `minWidth`**，用 `ElPopconfirm` 包裹危险操作
 
 ```tsx
 import { ElButton, ElPopconfirm, ElSpace, ElTag } from 'element-plus'
