@@ -80,11 +80,11 @@ export default defineConfig({
     elementPlusThemeBuilder({
       colors: {
         primary: '<primary-color>',
-        success: '#67c23a',
-        warning: '#e6a23c',
-        danger: '#f56c6c',
-        error: '#f56c6c',
-        info: '#909399',
+        success: '<success-color>',
+        warning: '<warning-color>',
+        danger: '<danger-color>',
+        error: '<error-color>',
+        info: '<info-color>',
       },
     }),
     vue(),
@@ -332,19 +332,7 @@ VITE_RSA_PUBLIC_KEY=<base64 公钥串>
 # public/tinymce/** -text
 ```
 
-**首次添加后必做的一次性规范化**：
-
-```bash
-git add .gitattributes
-git commit -m "chore: add .gitattributes for line ending consistency"
-
-# 让规则回溯应用到已有文件
-git add --renormalize .
-git status   # 如有改动
-git commit -m "chore: normalize line endings"
-```
-
-之后克隆 / pull 的所有同事自动按规则处理，**不需要任何本地 Git 配置**。
+写到项目根 `.gitattributes`。克隆 / pull 的同事自动按规则处理，**不需要任何本地 Git 配置**。
 
 ---
 
@@ -376,7 +364,7 @@ git commit -m "chore: normalize line endings"
 import { createApp } from 'vue'
 
 import App from './App.vue'
-import './assets/styles/ress.min.css'    // 全局 reset（自行下载 ress.min.css 放 src/assets/styles/）
+import './assets/styles/ress.min.css'    // 全局 reset（从 references/assets-styles/ress.min.css 复制过去）
 import 'virtual:uno.css'
 import './assets/generated/element-plus-theme.css'   // 由 ep theme builder 自动生成
 

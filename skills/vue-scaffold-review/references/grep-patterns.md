@@ -303,6 +303,38 @@ export const useAuthStore = defineStore('auth', () => {
 
 ---
 
+## [A12] 全量引入 element-plus CSS
+
+**规则**：element-plus 组件靠 `ElementPlusResolver` 按需 auto-import，CSS 由 theme builder 一次性生成，业务文件不允许 import element-plus 的样式文件。
+
+**正则**：
+
+```
+import\s+['"]element-plus/(dist|theme-chalk|lib)/
+```
+
+**文件范围**：`src/**/*.{ts,vue,tsx}`
+
+**排除**：无（任何位置都不应该有）
+
+**期望命中数**：0
+
+**违规示例**：
+```ts
+// src/main.ts
+import 'element-plus/dist/index.css'
+
+// 或某个业务文件
+import 'element-plus/theme-chalk/el-button.css'
+```
+
+**合规重写**：
+- 删掉这些 import
+- 确保 `vite.config.ts` 配置了 `ElementPlusResolver({ importStyle: false })` + `elementPlusThemeBuilder({...})`
+- `main.ts` 单次 import theme builder 产物：`import './assets/generated/element-plus-theme.css'`
+
+---
+
 ## 附：A4 / A5 不在本文件
 
 | 反模式 | 处理位置 | 原因 |

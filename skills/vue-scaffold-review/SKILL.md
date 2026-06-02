@@ -1,6 +1,6 @@
 ---
 name: vue-scaffold-review
-description: 按 vue-scaffold-app 规范对 Vue 3 中后台工程做合规审查。当用户说"按规范审一下代码"、"检查这个工程是否符合规范"、"审一下 xx 模块"、"vue 规范合规检查"、"扫一下违规"、"按本套标准审一下"等时使用。默认审当前分支增量改动，输出按严重程度分组的违规清单 + file:line + 规则引用 + 修复建议，写入工程 docs/code-review/ 目录。**只读不写**：本 skill 不修改任何业务代码，仅生成报告。
+description: 按 vue-scaffold-app 规范对 Vue 3 中后台工程做合规审查。当用户说"审查项目规范"、"按规范审一下代码"、"检查这个工程是否符合规范"、"审一下 xx 模块"、"vue 规范合规检查"、"扫一下违规"、"按本套标准审一下"等时使用。默认审 src/ 全量代码（不挂钩 git 分支），输出按严重程度分组的违规清单 + file:line + 规则引用 + 修复建议，写入工程 docs/code-review/ 目录。**只读不写**：本 skill 不修改任何业务代码，仅生成报告。
 user-invocable: true
 allowed-tools:
   - Bash
@@ -16,15 +16,9 @@ allowed-tools:
 
 ## 何时使用本 skill
 
-- 用户要求按规范审查代码（"按规范审一下"、"扫一下违规"、"检查合规"、"按本套标准检查"）
-- PR 合并前自检
-- 老项目接手时摸底其与规范的差距
-- 定期对一个模块 / 子工程做一次合规体检
+用户要求按规范审查工程代码时使用——"审查项目规范"、"按规范审一下"、"扫一下违规"、"检查合规"、"按本套标准检查"等。
 
-不要在以下场景使用：
-- 想做通用 code review（找 bug / 简化代码）—— 用内置 `/code-review`，那个负责正确性
-- 想测 UI 行为是否正确 —— 用 `/ui-test`，那个负责功能
-- 想搭新工程 / 加模块 —— 用 `vue-scaffold-app` / `vue-scaffold-module`
+本 skill 的唯一目的就是回答"当前代码符不符合 vue-scaffold-app 规范"这一个问题——无任何场景化约束。
 
 ## 设计原则
 
@@ -54,14 +48,13 @@ allowed-tools:
 
 | 模式 | 触发 | 范围 |
 |---|---|---|
-| **默认（增量）** | 不传额外参数 | `git diff` 本分支未合并到 main 的所有改动 + 未提交（含 staged 与 unstaged） |
+| **默认（全量）** | 不传额外参数 | 扫 `src/` 全部 |
 | **指定路径** | "审 src/views/role/" | 仅扫该路径下 `.vue` / `.ts` / `.tsx` |
-| **全量** | "审整个工程" 或 `--all` | 扫 `src/` 全部 |
 | **仅报告位置** | `--report-only` | 报告生成后不在 chat 里完整展示，只回报告路径 |
 
-默认走增量是因为最常见的场景是 **PR 前自检**——全量审一遍噪声大、执行慢，绝大多数情况下也不需要。
+默认全量扫描 `src/`——**规范审查的语义是"当前代码合不合规"，与 git 状态完全无关**。不调用任何 git 命令，不依赖 main / master / develop 等任何分支名，工程是不是 git 仓库都能跑。
 
-未传参数时如果当前不在 git 仓库或 `git diff` 空，主动退回询问用户："要审整个 src/ 吗？"——别静默切到全量。
+用户传了路径就只扫该路径，否则一律全量。没有其它分支条件、没有场景化默认。
 
 ## 执行流程
 
@@ -90,19 +83,13 @@ allowed-tools:
 
 根据"输入识别"分支：
 
-- **默认增量**：
-  ```bash
-  git merge-base HEAD main
-  git diff --name-only $(git merge-base HEAD main)..HEAD
-  git status --porcelain | awk '{print $2}'   # 未提交
-  ```
-  合并去重，过滤出 `.vue` / `.ts` / `.tsx` 文件。
+- **默认（全量）**：`Glob` 命中 `src/**/*.{vue,ts,tsx}`，排除：
+  - `node_modules/` / `dist/`
+  - `src/types/`（自动生成的 d.ts）
+  - `src/assets/generated/`（ep 主题插件产出）
+- **指定路径**：`Glob` 命中 `<path>/**/*.{vue,ts,tsx}`，同样应用上面的排除规则
 
-- **指定路径**：`Glob` 命中 `<path>/**/*.{vue,ts,tsx}`。
-
-- **全量**：`Glob` 命中 `src/**/*.{vue,ts,tsx}`，排除 `node_modules` / `dist` / `src/types/`（自动生成的 d.ts）/ `src/assets/generated/`。
-
-把命中文件列出来（chat 里显示数量与示例 3–5 个文件名，避免刷屏）。
+把命中文件列出来（chat 里显示数量与示例 3–5 个文件名，避免刷屏）。**不调用任何 git 命令**——不读 HEAD、不比 diff、不依赖分支。
 
 ### Step 3 — 第一层：机械 grep（A1–A11）
 

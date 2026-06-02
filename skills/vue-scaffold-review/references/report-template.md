@@ -65,7 +65,7 @@ docs/code-review/2026-05-29-1430.md
 
 ## 🟡 警告
 
-> 强烈建议修复，但允许临时保留（需在 PR 描述中说明原因）。
+> 强烈建议修复，但允许临时保留。
 
 {{#each warning_findings}}
 ### {{rule_id}} {{rule_title}}
@@ -127,7 +127,7 @@ docs/code-review/2026-05-29-1430.md
 ## 下一步
 
 - 🔴 严重违规请按"修复建议"逐条处理，处理完重跑本 skill 验证
-- 🟡 警告酌情处理，PR 描述说明保留原因
+- 🟡 警告酌情处理
 - 🟢 建议可在迭代过程中渐进改进
 
 ```
@@ -139,7 +139,7 @@ docs/code-review/2026-05-29-1430.md
 | 占位符 | 含义 | 来源 |
 |---|---|---|
 | `{{yyyy-MM-dd HH:mm}}` | 审查时间戳 | `Date.now()` |
-| `{{mode}}` | "增量（vs main）" / "全量" / "路径: src/views/role/" | 输入识别决定 |
+| `{{mode}}` | "全量（src/）" / "路径: src/views/role/" | 输入识别决定 |
 | `{{n_files}}` | 实际审查的文件数 | Step 2 结果 |
 | `{{n_lines}}` | 这些文件的总行数 | `wc -l` 累加 |
 | `{{commit_sha_short}}` | vue-scaffold-app 当前提交 sha 前 7 位 | `git -C <repo> log -1 --format=%h skills/vue-scaffold-app` |

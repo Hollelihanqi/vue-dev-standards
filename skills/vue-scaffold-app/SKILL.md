@@ -58,7 +58,7 @@ allowed-tools:
 | 类型 | TypeScript 6+ + vue-tsc | `noUnusedLocals` 必开 |
 | 路由 | vue-router 5.x（Vue 3 对应的 5.x 版本） | |
 | 状态 | pinia 3 + pinia-plugin-persistedstate | |
-| UI | Element Plus 2.13+ + `@element-plus/icons-vue` | |
+| UI | Element Plus 2.13+ + `@element-plus/icons-vue` | 组件靠 `ElementPlusResolver` auto-import，CSS 由 theme builder 一次性生成 `assets/generated/element-plus-theme.css`，**禁止 `import 'element-plus/dist/index.css'` 等全量引入** |
 | 主题 | `@rdeam/vite-plugin-element-plus-theme-builder` | 主色由 vite 插件编译产出 |
 | 原子 CSS | UnoCSS（presetWind3 + presetAttributify + presetIcons） | 默认风格首选 |
 | 组件自动注册 | `@rdeam/vue-components-resolver` 的 `AppComponentsResolver` | 只扫 `src/components` 顶层 |
@@ -152,7 +152,7 @@ allowed-tools:
 11. **[R11] store 模块禁止手动调 `localStorage`**：所有跨会话持久化通过 `defineStore` 第三参数的 `persist: { pick: [...] }` 配置（`pinia-plugin-persistedstate` 全局注册）。**不允许**出现 `localStorage.setItem(...)` / `localStorage.getItem(...)` / `localStorage.removeItem(...)` / `localStorage.clear()` 这类调用。退出登录用"in-memory state 重置"（`token.value = ''` 等），persistedstate 会自动把空值同步回 localStorage——不要用 `localStorage.clear()`，它会把跟登录态无关的偏好（语言 / 侧边栏 / 系统配置）一起误伤。
 12. **[R12] KeepAlive 策略不强制**：`Main.vue` 里 `<keep-alive>` 是用 `:include="keepAliveNames"` 白名单还是 `v-if="route.meta.keepAlive"` 条件分支，**由项目自己决定**，脚手架不作硬性要求。两种写法的取舍各有道理（白名单集中、分支显式），选择哪一种是项目内部的工程权衡，不属于"规范"层面。
 
-## 反模式（A1–A11，明确禁止）
+## 反模式（A1–A12，明确禁止）
 
 > 这些编号是稳定 ID，被 `vue-scaffold-review` 报告引用。修改本节请保持编号不变。
 
@@ -167,6 +167,7 @@ allowed-tools:
 - ❌ **[A9]** 把 fetch / 原生 XHR 与 axios 实例混用 —— 全部走 `request` / `requestWithLoading`
 - ❌ **[A10]** 在 `views/` 直接放业务接口的硬编码 URL —— 接口集中在模块同目录 `api.ts`
 - ❌ **[A11] store 里手动调 `localStorage.setItem(KEY, value)` / `localStorage.getItem(KEY)` / `localStorage.clear()`** —— 一律用 `defineStore(..., { persist: { pick: [...] } })` 走插件；退出清登录态用 in-memory state 重置，让 persistedstate 自动同步，不要 `localStorage.clear()` 误伤偏好
+- ❌ **[A12]** `import 'element-plus/dist/index.css'` / `import 'element-plus/theme-chalk/**.css'` —— 全量引入 element-plus CSS。规范用 `unplugin-vue-components` 的 `ElementPlusResolver` 按需自动 import 组件，CSS 由 `@rdeam/vite-plugin-element-plus-theme-builder` 编译成 `src/assets/generated/element-plus-theme.css`，在 `main.ts` 单次 import 即可。**业务文件任何位置都不应该 import element-plus 的 CSS**
 
 ## 执行流程（从 `pnpm create vite` 到可运行的 hello world 业务页）
 
@@ -209,8 +210,9 @@ mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,di
 3. `vite.config.ts`（覆盖默认版本，加 alias / 插件 / 代理）
 4. `uno.config.ts`（主题色 + shortcuts）
 5. `.env`（VITE_APP_TITLE / VITE_API_BASE_URL / VITE_API_TIMEOUT / VITE_RSA_PUBLIC_KEY）
-6. `.gitattributes`（跨平台换行符规范，**新项目首次提交时必加**，并执行一次 `git add --renormalize .`）
+6. `.gitattributes`（跨平台换行符规范）
 7. `index.html`（覆盖默认 `<title>Vite + Vue + TS</title>` 为 `<title>%VITE_APP_TITLE%</title>`，并把 `<script src="/src/main.ts">` 保留）
+8. `src/assets/styles/ress.min.css` —— 直接从 `references/assets-styles/ress.min.css` 复制过去（全局 reset，main.ts 已引入）
 
 ### Step 4 — 写核心工具
 
