@@ -29,7 +29,7 @@ allowed-tools:
 
 ```
 #app                       width:100vw; height:100vh        ← 唯一的 100vh 源头（App.vue 全局 <style>）
-└ .layout-root             flex h-full w-full overflow-hidden bg-[#eef2f8]
+└ .layout-root             flex h-full w-full overflow-hidden
   ├ aside.layout-sider     flex-shrink-0 h-full overflow-hidden  ← 展开 w-[220px] / 收起 w-16
   └ section.layout-body    flex min-h-screen min-w-0 flex-1 flex-col
     ├ .layout-header       flex h-16 ...                     ← 固定高 64px
@@ -44,7 +44,7 @@ allowed-tools:
 ## 六条强制规则（均带真实参数）
 
 > **规则编号（供 `vue-scaffold-review` 引用）**：
-> `L1` layout-main padding · `L2` 撑满不溢出 / sticky-container 慎用 · `L3` 不准半截（白底圆角）· `L4` 菜单宽度 220 · `L5` 操作列用 width · `L6` view 根节点挂 view-w。
+> `L1` layout-main padding · `L2` 撑满不溢出 / sticky-container 慎用 · `L3` 不准半截（白底 + 按需圆角）· `L4` 菜单宽度 220 · `L5` 操作列用 width · `L6` view 根节点挂 view-w。
 
 ### 规则 L1 · layout-main 的 padding 是 `p-4 md:px-5`
 
@@ -73,24 +73,56 @@ allowed-tools:
 - `layout-main` 必须是 `overflow-hidden`，**绝不允许改成 `overflow-auto` 让外壳自己滚动**（那会出现整页滚动 + header 跟着滚的坏体验）。
 - **默认就应该让内容在一屏内放下**——list 页内部滚动由 `pro-table` 自己处理；detail / 表单页优先靠精简字段、分区、合理留白把内容塞进剩余高度，而不是让它溢出。
 
-#### `sticky-container` —— 慎用，不是默认方案
+#### `sticky-container` —— 内容超长时的滚动容器
 
-- **当前标准项目里没有任何页面用到 `sticky-container`**。它只是一个备用逃生口，不是"内容一多就上"的常规手段。
-- 只有在**详情页内容确实超长、且无法通过精简 / 分区 / 设计塞进一屏**时，才用 `sticky-container` 包裹内容区。能不用就不用。
-- 引入前先问自己：这页是不是可以重新设计成自适应一屏？大多数情况答案是"可以"。
-- 反模式：① 默认给每个详情页都套 `sticky-container`；② 给 view 根节点或 layout-main 直接挂 `overflow-auto` / `overflow-y-scroll` 凑合滚动。要滚动就用 `sticky-container`，但先确认真的需要滚动。
+- `sticky-container` 是详情 / 表单页内容**确实超长、无法精简进一屏时**的滚动容器。优先把内容精简 / 分区到一屏内；真要滚动才用它。
+- **判断标准**：页面**最后一个模块若高度自适应**（用 `flex-1` 吃掉剩余高度），整页就能在一屏内放下，**不需要 `sticky-container`**——根节点 `view-w h-full` + 内容 `flex h-full flex-col`，最后一块挂 `flex-1` 即可撑满。只有最后一块也无法自适应、内容确实溢出时，才用 `sticky-container`。
+- 违规写法：给 view 根节点或 `layout-main` 直接挂 `overflow-auto` / `overflow-y-scroll` 凑合滚动。要滚动就用 `sticky-container`。
 
-### 规则 L3 · 任何页面都不能"半截"——view 自带白底 + 圆角
+#### pro-table 的高度契约（list 页能否自滚的关键，照抄勿简化）
 
-"半截" = view 没铺满白色卡片，底部灰色背景（`#eef2f8`）透出来。**每个 view 根节点必须自带白底 + 圆角，并 `h-full` 撑满**，三种标准形态：
+「list 页内部滚动由 pro-table 自己处理」能成立，**前提是 pro-table 组件自身实现了高度自适应**。标准实现（见 `vue-scaffold-base-components` 的 `ProTable.vue`、标准工程 `src/components/pro-table/ProTable.vue`）就是这套结构：
 
-| 页面类型 | view 根节点写法 | 白底来源 |
-|---|---|---|
-| **增删改查列表页** | `<div class="view-w h-full w-full">` 内直接放 `<pro-table>` | **pro-table 自带卡片**，无需手写白底——保持标准列表态即可（见下方"列表页标准态"） |
-| **详情页** | `<div class="view-w h-full flex flex-col bg-white rounded-2 p-6 gap-6">` | 根节点自身 `bg-white rounded-2` |
-| **表单 / 资料页** | `<div class="view-w h-full w-full">` 内放 `<el-card class="page-fill-card" shadow="never">` | `page-fill-card` 撑满的卡片 |
+```vue
+<!-- pro-table 根：撑满父级 + 纵向 flex + overflow-hidden -->
+<div class="pro-table-w h-[100%] w-[100%] flex flex-col overflow-hidden gap-2">
+  <search-form ... />                                  <!-- 查询区：自然高度 -->
+  <div class="ptable-box flex-1 h-0 p-[16px] bg-white"> <!-- 表体区：flex-1 h-0 吃掉剩余高度 + 自带白底 -->
+    <HTable ... />                                      <!-- 表格在此容器内部滚动 -->
+  </div>
+</div>
+```
+
+- **撑高统一用 `flex-1 h-0`，不要用 `min-h-0`**：`flex-1` 吃掉剩余高度、`h-0` 让其可收缩到内容以下从而内部滚动。这是本规范全站统一写法（`sticky-container` 的 `flex-1 h-0`、`table` 组件同理）。
+- pro-table **自带白底**（`ptable-box bg-white`）：list 页 view 根节点只写 `view-w h-full w-full`，**不要**再包灰底容器、也不要手写 `bg-white`。
+- view 根节点的 `h-full` 是喂给 pro-table 的**唯一高度来源**——pro-table 是 `h-[100%]`，缺了这层 `h-full` 它会塌成 0。
+
+> ⚠️ **list 页被裁 / 不滚，根因只会是 pro-table 组件本身没按上面的高度契约实现**（例如工程里塞了一个去掉高度的简化版）。修复方式是**换回标准 pro-table**（从内部组件包 / `vue-scaffold-base-components` 取），**绝不是**在调用方打补丁——给业务页或 `layout-main` 套 `overflow-auto`、给 list 页手加滚动容器都是错的，会掩盖组件缺陷并破坏 L2。
+
+### 规则 L3 · 任何页面都不能"半截"——view 自带白底（列表页不需要圆角，pro-table 已自带）
+
+"半截" = view 没铺满白色卡片，底部背景色透出来。**每个 view 根节点必须 `h-full` 撑满**，白底和圆角按类型处理：
+
+| 页面类型           | view 根节点写法                                                                             | 白底来源                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **增删改查列表页** | `<div class="view-w h-full w-full">` 内直接放 `<pro-table>`                                 | **pro-table 自带卡片**，无需手写白底——保持标准列表态即可（见下方"列表页标准态"） |
+| **详情页**         | `<div class="view-w h-full flex flex-col bg-white rounded-2 p-6 gap-6">`                    | 根节点自身 `bg-white rounded-2`                                                  |
+| **表单 / 资料页**  | `<div class="view-w h-full w-full">` 内放 `<el-card class="page-fill-card" shadow="never">` | `page-fill-card` 撑满的卡片                                                      |
 
 **列表页标准态**：只要根节点 `view-w h-full` + 直接用 `pro-table`，就是合规的，不会"半截"。不要在 pro-table 外再套自定义灰底容器。
+
+> **列表页标准结构**：根节点 `view-w h-full w-full` 下只放一个 `pro-table`；查询区用 `:form-controls` 传入，"新增"等按钮放 `pro-table` 的 `#tableHeader` 插槽，弹层挂在 `view-w` 同级（template 多根）。
+>
+> ```vue
+> <div class="view-w h-full w-full">
+>   <pro-table :columns="columns" :form-controls="searchFormList" :request-api="requestTableData">
+>     <template #tableHeader>
+>       <el-button type="primary" @click="handleCreate">创建项目</el-button>
+>     </template>
+>   </pro-table>
+> </div>
+> <XxxCreateDialog v-model="createDialogVisible" />
+> ```
 
 ### 规则 L4 · 左侧菜单宽度 220
 
@@ -125,7 +157,8 @@ allowed-tools:
 
 ```vue
 <template>
-  <div class="view-w h-full w-full">   <!-- ✅ 根节点 view-w + h-full -->
+  <div class="view-w h-full w-full">
+    <!-- ✅ 根节点 view-w + h-full -->
     <pro-table ... />
   </div>
 
@@ -144,14 +177,8 @@ allowed-tools:
 
 - [ ] view 根节点挂了 `view-w` 且带 `h-full`
 - [ ] 列表页：`view-w h-full` 内直接 `pro-table`，没套多余灰底容器
-- [ ] 详情页：根节点带 `bg-white rounded-2 p-6`，铺满无"半截"
-- [ ] 页面内无 `overflow-auto`/`overflow-y-scroll` 凑合滚动；要滚动用 `sticky-container`
+- [ ] 详情页 / 表单页：根节点带 `bg-white rounded-2 p-6`，铺满无"半截"；列表页只挂 `view-w h-full`，圆角由 pro-table 自带
+- [ ] 页面内无 `overflow-auto`/`overflow-y-scroll` 凑合滚动；内容超长需滚动时用 `sticky-container`
 - [ ] 没有改动外壳 `layout-main` 的 `overflow-hidden` / `p-4 md:px-5`
 - [ ] 菜单展开 `w-[220px]`、收起 `w-16`
 - [ ] 表格操作列用 `width` 不用 `minWidth`，`fixed: 'right'`
-
-## 与其它 skill 的关系
-
-- 外壳（`Layout.vue` / `Main.vue` / 各 `layout/*`）的完整模板在 `vue-scaffold-app` 的 `references/layout-and-system-views.md`——但**布局类名与高度契约以本 skill 为准**。
-- view 根节点 `view-w` 规范、弹层同级规范、pro-table/search-form 用法，详见 `vue-scaffold-module`。
-- `sticky-container` 组件本体来自 `vue-scaffold-base-components`。

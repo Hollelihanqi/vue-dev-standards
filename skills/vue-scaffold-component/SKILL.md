@@ -20,7 +20,7 @@ allowed-tools:
 - 用户说 "封装一个开放联盟链框架选择器"
 - 用户说 "把状态字典做成组件"
 - 用户说 "做一个能自请求的 xx select"
-- 主 skill `vue-app-scaffold` 或子 skill `vue-scaffold-module` 在需要业务下拉时调度
+- 主 skill `vue-scaffold-app` 或子 skill `vue-scaffold-module` 在需要业务下拉时调度
 
 ## 前置假设
 
@@ -206,4 +206,4 @@ import <ComponentName> from '@/custom-components/<ComponentName>'
 
 ## 引用
 
-主 skill `vue-app-scaffold/references/component-conventions.md` 有更多设计原则；本子 skill 内嵌的模板已是最小可运行版本。
+组件分层原则（`components/` vs `custom-components/`）见主 skill `vue-scaffold-app` 的 `[R6]`；本子 skill 内嵌的模板已是最小可运行版本。

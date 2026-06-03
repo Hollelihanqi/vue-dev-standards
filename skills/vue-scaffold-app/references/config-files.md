@@ -1,6 +1,7 @@
 # config-files —— 工程配置层完整模板
 
 替换占位符：
+
 - `<project-name>` → 实际包名（kebab-case，如 `my-admin`）
 - `<api-target>` → 后端基址（例如 `http://<backend-host>:<port>/`），多套环境用不同 `.env.*` 文件
 - `<primary-color>` → 主色（默认 `#0054a7`）
@@ -60,40 +61,40 @@
 ## vite.config.ts
 
 ```ts
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import AutoImport from 'unplugin-auto-import/vite'
-import vueJsx from '@vitejs/plugin-vue-jsx'
-import UnoCSS from 'unocss/vite'
-import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import { AppComponentsResolver } from '@rdeam/vue-components-resolver'
-import { elementPlusThemeBuilder } from '@rdeam/vite-plugin-element-plus-theme-builder'
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+import AutoImport from "unplugin-auto-import/vite";
+import vueJsx from "@vitejs/plugin-vue-jsx";
+import UnoCSS from "unocss/vite";
+import Components from "unplugin-vue-components/vite";
+import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
+import { AppComponentsResolver } from "@rdeam/vue-components-resolver";
+import { elementPlusThemeBuilder } from "@rdeam/vite-plugin-element-plus-theme-builder";
 
 export default defineConfig({
   resolve: {
     alias: {
-      '@': '/src',
+      "@": "/src",
     },
   },
   plugins: [
     elementPlusThemeBuilder({
       colors: {
-        primary: '<primary-color>',
-        success: '<success-color>',
-        warning: '<warning-color>',
-        danger: '<danger-color>',
-        error: '<error-color>',
-        info: '<info-color>',
+        primary: "<primary-color>",
+        success: "<success-color>",
+        warning: "<warning-color>",
+        danger: "<danger-color>",
+        error: "<error-color>",
+        info: "<info-color>",
       },
     }),
     vue(),
     vueJsx(),
     UnoCSS(),
     AutoImport({
-      imports: ['vue', 'vue-router', 'pinia'],
+      imports: ["vue", "vue-router", "pinia"],
       resolvers: [ElementPlusResolver()],
-      dts: 'src/types/auto-imports.d.ts',
+      dts: "src/types/auto-imports.d.ts",
     }),
     Components({
       dirs: [],
@@ -101,7 +102,7 @@ export default defineConfig({
         ElementPlusResolver({ importStyle: false }),
         AppComponentsResolver(),
       ],
-      dts: 'src/types/components.d.ts',
+      dts: "src/types/components.d.ts",
     }),
   ],
   build: {
@@ -111,15 +112,15 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             {
-              name: 'vue-vendor',
+              name: "vue-vendor",
               test: /[\\/]node_modules[\\/](vue|vue-router|pinia)[\\/]/,
             },
             {
-              name: 'element-plus',
+              name: "element-plus",
               test: /[\\/]node_modules[\\/](element-plus|@element-plus)[\\/]/,
             },
             {
-              name: 'vendor',
+              name: "vendor",
               test: /[\\/]node_modules[\\/]/,
             },
             // 有 echarts / chart.js 时取消注释；放在 vendor 之前才会命中
@@ -135,22 +136,23 @@ export default defineConfig({
   server: {
     proxy: {
       // 按业务后端服务前缀，多套就加多个。下面两条仅是示例：
-      '/api/<service-a>': {
-        target: '<api-target>',
+      "/api/<service-a>": {
+        target: "<api-target>",
         changeOrigin: true,
-        rewrite: path => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/api/, ""),
       },
-      '/api/<service-b>': {
-        target: '<api-target>',
+      "/api/<service-b>": {
+        target: "<api-target>",
         changeOrigin: true,
-        rewrite: path => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },
-})
+});
 ```
 
 **注意**：
+
 - `dirs: []` 关闭默认目录扫描，由 `AppComponentsResolver` 接管
 - 代理路径前缀必须以 `/api/<service>` 开头（与 `.env.VITE_API_BASE_URL=/api` 对齐）
 - 多环境后端通过 `.env.development` / `.env.production` 切换
@@ -165,34 +167,30 @@ import {
   presetAttributify,
   presetIcons,
   presetWind3,
-} from 'unocss'
+} from "unocss";
 
 // UnoCSS 基础配置。
 // 兼容当前项目已经使用的原子类写法，并对旧的数字字号类做像素映射。
 export default defineConfig({
-  presets: [
-    presetWind3(),
-    presetAttributify(),
-    presetIcons(),
-  ],
+  presets: [presetWind3(), presetAttributify(), presetIcons()],
   shortcuts: {
-    'flex-center': 'flex items-center justify-center',
-    'flex-between': 'flex items-center justify-between',
+    "flex-center": "flex items-center justify-center",
+    "flex-between": "flex items-center justify-between",
   },
   rules: [
     // 兼容项目中的 `text-14`、`text-16` 这类字号写法，统一按像素处理。
-    [/^text-(\d+)$/, ([, size]) => ({ 'font-size': `${size}px` })],
+    [/^text-(\d+)$/, ([, size]) => ({ "font-size": `${size}px` })],
   ],
   theme: {
     colors: {
-      primary: 'var(--el-color-primary)',
-      success: 'var(--el-color-success)',
-      warning: 'var(--el-color-warning)',
-      danger: 'var(--el-color-danger)',
-      info: 'var(--el-color-info)',
+      primary: "var(--el-color-primary)",
+      success: "var(--el-color-success)",
+      warning: "var(--el-color-warning)",
+      danger: "var(--el-color-danger)",
+      info: "var(--el-color-info)",
     },
   },
-})
+});
 ```
 
 需要项目级语义色时按需扩展 `theme.colors`（如 `glass-50 / glass-line / ink-1 / ink-2`），shortcuts 收口"玻璃风边框"、"玻璃风按钮"等常用组合。
@@ -201,69 +199,43 @@ export default defineConfig({
 
 ## tsconfig.json
 
-```json
-{
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
-}
-```
+Vite 脚手架已生成，无需改动。
 
 ---
 
 ## tsconfig.app.json
 
-```json
-{
-  "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "noEmit": true,
-    "types": ["vite/client"],
-
-    /* Linting */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
-}
-```
-
-`noUnusedLocals` 是底线 —— 它会逼着开发者随手清理无用变量。下划线前缀（`_var`）依然报错时用 `void _var` 显式标记 intentionally unused。
-
----
-
-## tsconfig.node.json
+Vite 脚手架已生成基础配置，在 `compilerOptions` 里**补上**以下项：
 
 ```json
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "target": "es2023",
-    "lib": ["ES2023"],
-    "module": "esnext",
-    "types": ["node"],
-    "skipLibCheck": true,
-
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
     "noEmit": true,
-
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+}
+```
+
+> `noUnusedLocals` 是底线——逼着开发者随手清理无用变量。下划线前缀（`_var`）依然报错时用 `void _var` 显式标记 intentionally unused。
+
+---
+
+## tsconfig.node.json
+
+Vite 脚手架已生成基础配置，在 `compilerOptions` 里**补上**以下项：
+
+```json
+{
+  "compilerOptions": {
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  }
 }
 ```
 
@@ -275,6 +247,8 @@ export default defineConfig({
 VITE_APP_TITLE=<应用标题>
 VITE_API_BASE_URL=/api
 VITE_API_TIMEOUT=60000
+# 业务成功码：后端接口 data.code === 0 视为成功，不同后端可覆盖为其他值（如 200、1000）
+VITE_API_SUCCESS_CODE=0
 
 # RSA 公钥：所有需要前端加密的接口（登录 / 注册 / 改密码 / 修改资料等）共用
 VITE_RSA_PUBLIC_KEY=<base64 公钥串>
@@ -361,24 +335,25 @@ VITE_RSA_PUBLIC_KEY=<base64 公钥串>
 ## src/main.ts
 
 ```ts
-import { createApp } from 'vue'
+import { createApp } from "vue";
 
-import App from './App.vue'
-import './assets/styles/ress.min.css'    // 全局 reset（从 references/assets-styles/ress.min.css 复制过去）
-import 'virtual:uno.css'
-import './assets/generated/element-plus-theme.css'   // 由 ep theme builder 自动生成
+import App from "./App.vue";
+import "./assets/styles/ress.min.css"; // 全局 reset（从 references/assets-styles/ress.min.css 复制过去）
+import "virtual:uno.css";
+import "./assets/generated/element-plus-theme.css"; // 由 ep theme builder 自动生成
 
-import router from './router'
-import pinia from './store'
+import router from "./router";
+import pinia from "./store";
 
-const app = createApp(App)
+const app = createApp(App);
 
-app.use(router)
-app.use(pinia)
-app.mount('#app')
+app.use(router);
+app.use(pinia);
+app.mount("#app");
 ```
 
 注意：
+
 - **不再** `app.use(i18n)`，本项目默认不启用 i18n
 - 主题 css 是构建产物，不要手改，**列入 .gitignore**：
   ```
@@ -411,13 +386,14 @@ app.mount('#app')
 
 ```ts
 interface ImportMetaEnv {
-  readonly VITE_APP_TITLE: string
-  readonly VITE_API_BASE_URL: string
-  readonly VITE_API_TIMEOUT: string
-  readonly VITE_RSA_PUBLIC_KEY: string
+  readonly VITE_APP_TITLE: string;
+  readonly VITE_API_BASE_URL: string;
+  readonly VITE_API_TIMEOUT: string;
+  readonly VITE_API_SUCCESS_CODE: string;
+  readonly VITE_RSA_PUBLIC_KEY: string;
 }
 
 interface ImportMeta {
-  readonly env: ImportMetaEnv
+  readonly env: ImportMetaEnv;
 }
 ```

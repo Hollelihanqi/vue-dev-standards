@@ -13,7 +13,7 @@ allowed-tools:
 
 # vue-scaffold-app — Vue 3 中后台工程脚手架
 
-按本 skill 给出的规范，从 0 到 1 初始化一个 Vue 3 中后台工程。本 skill 自身即为规范来源——所有目录结构、配置、工具、Layout、系统页规范都写在本文件与 `references/` 里，不需要也不应该参考任何外部项目。目标是让任意业务方拿到第一天就能直接写功能页，不再重复造轮子，也不再每个人风格各异。
+按本 skill 给出的规范，从 0 到 1 初始化一个 Vue 3 中后台工程。本 skill 自身即为规范来源——所有目录结构、配置、工具、Layout、系统页规范都写在本文件与 `references/` 里，不需要也不应该参考任何外部项目，不再重复造轮子，也不再每个人风格各异。
 
 ## 何时使用本 skill
 
@@ -28,12 +28,12 @@ allowed-tools:
 主 skill 负责**总体编排与一次性基础设施**（配置 / 工具 / 路由 / 状态 / Layout / 系统页）。
 **高频独立操作**拆为可单独触发的子 skill，主 skill 在对应步骤通过 Skill 工具调用它们：
 
-| 子 skill | 何时调用 | 单独触发场景 |
-|---|---|---|
-| `vue-scaffold-layout` | 写 `Layout.vue` / `Main.vue` 及任意 view 页面时（布局类名与高度契约的权威来源） | "页面有半截 / 不撑满 / 滚动条不对"、"菜单多宽"、"操作列宽度怎么写" |
-| `vue-scaffold-base-components` | 主流程 Step 7（没有内部 npm 包时） | 老项目里"把 6 个基础组件拷过来" |
-| `vue-scaffold-module` | 主流程 Step 8（添加第一个业务模块） | 老项目里"加一个 xx 列表 / 详情页" |
-| `vue-scaffold-component` | 业务下拉 / 状态字典需要复用时 | 老项目里"封装一个 xx 选择器" |
+| 子 skill                       | 何时调用                                                                        | 单独触发场景                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `vue-scaffold-layout`          | 写 `Layout.vue` / `Main.vue` 及任意 view 页面时（布局类名与高度契约的权威来源） | "页面有半截 / 不撑满 / 滚动条不对"、"菜单多宽"、"操作列宽度怎么写" |
+| `vue-scaffold-base-components` | 主流程 Step 7（没有内部 npm 包时）                                              | 老项目里"把 6 个基础组件拷过来"                                    |
+| `vue-scaffold-module`          | 主流程 Step 8（添加第一个业务模块）                                             | 老项目里"加一个 xx 列表 / 详情页"                                  |
+| `vue-scaffold-component`       | 业务下拉 / 状态字典需要复用时                                                   | 老项目里"封装一个 xx 选择器"                                       |
 
 更细的子 skill（如 `vue-scaffold-config` / `vue-scaffold-utils`）按需扩展；这两个一次性写完就不动，留在主 skill 内联即可。
 
@@ -41,7 +41,7 @@ allowed-tools:
 
 主流程涉及的配置 / 工具 / 路由 / 状态 / Layout 等一次性基础设施代码模板放在同级 `references/` 目录：
 
-- `references/config-files.md` —— `package.json` / `vite.config.ts` / `uno.config.ts` / `tsconfig*.json` / `.env` / `index.html`
+- `references/config-files.md` —— `package.json` / `vite.config.ts` / `uno.config.ts` / `tsconfig*.json` / `.env` / `.gitattributes` / `index.html`
 - `references/core-utils.md` —— `utils/request.ts`（业务码统一处理）/ `utils/crypto.ts`（RSA 分段加密）/ `utils/format.ts`（空值占位 / 日期格式化等显示型辅助）/ `utils/regx.ts`（正则常量 + 基于正则的 element-plus 表单校验 rules 收口）
 - `references/router-store.md` —— `router/index.ts`（守卫 + 面包屑 + document.title）/ `store/index.ts` + `store/app.ts` + `store/auth.ts`
 - `references/layout-and-system-views.md` —— `Layout.vue` / `TheHeader.vue` / `TheMenu.vue` / `TheBreadcrumb.vue` / `useLayout.ts` 与 `system-views/login` `register` `reset-password` 全套
@@ -52,22 +52,22 @@ allowed-tools:
 
 ## 技术栈（固定选型，不允许临时换）
 
-| 类别 | 选型 | 备注 |
-|---|---|---|
-| 框架 | Vue 3.5+（`<script setup>` 写法） | 强制 setup 语法，禁用 Options API |
-| 构建 | Vite 8+ | |
-| 类型 | TypeScript 6+ + vue-tsc | `noUnusedLocals` 必开 |
-| 路由 | vue-router 5.x（Vue 3 对应的 5.x 版本） | |
-| 状态 | pinia 3 + pinia-plugin-persistedstate | |
-| UI | Element Plus 2.13+ + `@element-plus/icons-vue` | 组件靠 `ElementPlusResolver` auto-import，CSS 由 theme builder 一次性生成 `assets/generated/element-plus-theme.css`，**禁止 `import 'element-plus/dist/index.css'` 等全量引入** |
-| 主题 | `@rdeam/vite-plugin-element-plus-theme-builder` | 主色由 vite 插件编译产出 |
-| 原子 CSS | UnoCSS（presetWind3 + presetAttributify + presetIcons） | 默认风格首选 |
-| 组件自动注册 | `@rdeam/vue-components-resolver` 的 `AppComponentsResolver` | 只扫 `src/components` 顶层 |
-| 自动导入 API | `unplugin-auto-import`（vue / vue-router / pinia） | 业务文件不用手写 `import { ref }` 等 |
-| HTTP | axios | 统一拦截器，业务层不判 code |
-| 工具集 | @vueuse/core | |
-| 加密 | jsencrypt（RSA + PKCS#1 v1.5） | 收口到 `utils/crypto.ts` |
-| 样式 | SCSS（少量必要的 :deep 覆盖） | UnoCSS 是主旋律 |
+| 类别         | 选型                                                        | 备注                                                                                                                                                                            |
+| ------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 框架         | Vue 3.5+（`<script setup>` 写法）                           | 强制 setup 语法，禁用 Options API                                                                                                                                               |
+| 构建         | Vite 8+                                                     |                                                                                                                                                                                 |
+| 类型         | TypeScript 6+ + vue-tsc                                     | `noUnusedLocals` 必开                                                                                                                                                           |
+| 路由         | vue-router 5.x（Vue 3 对应的 5.x 版本）                     |                                                                                                                                                                                 |
+| 状态         | pinia 3 + pinia-plugin-persistedstate                       |                                                                                                                                                                                 |
+| UI           | Element Plus 2.13+ + `@element-plus/icons-vue`              | 组件靠 `ElementPlusResolver` auto-import，CSS 由 theme builder 一次性生成 `assets/generated/element-plus-theme.css`，**禁止 `import 'element-plus/dist/index.css'` 等全量引入** |
+| 主题         | `@rdeam/vite-plugin-element-plus-theme-builder`             | 主色由 vite 插件编译产出                                                                                                                                                        |
+| 原子 CSS     | UnoCSS（presetWind3 + presetAttributify + presetIcons）     | 默认风格首选                                                                                                                                                                    |
+| 组件自动注册 | `@rdeam/vue-components-resolver` 的 `AppComponentsResolver` | 只扫 `src/components` 顶层                                                                                                                                                      |
+| 自动导入 API | `unplugin-auto-import`（vue / vue-router / pinia）          | 业务文件不用手写 `import { ref }` 等                                                                                                                                            |
+| HTTP         | axios                                                       | 统一拦截器，业务层不判 code                                                                                                                                                     |
+| 工具集       | @vueuse/core                                                |                                                                                                                                                                                 |
+| 加密         | jsencrypt（RSA + PKCS#1 v1.5）                              | 收口到 `utils/crypto.ts`                                                                                                                                                        |
+| 样式         | SCSS（少量必要的 :deep 覆盖）                               | UnoCSS 是主旋律                                                                                                                                                                 |
 
 ## 顶层目录结构（必须严格按此组织）
 
@@ -136,24 +136,25 @@ allowed-tools:
 
 **[S-system-views-split] 两个 system-views/views 分层是核心**：登录注册这类全屏页面**不进 Layout**，与业务页面用不同的视觉容器；这块千万别合并。
 
-## 十二条不可违背的约定（R1–R12）
+## 十三条不可违背的约定（R1–R13）
 
 > 这些编号是稳定 ID，被 `vue-scaffold-review` 报告引用。修改本节请保持编号不变。
 
-1. **[R1] business code 收口**：axios 拦截器内 `code === 0` 直接返回 `data.data`，其它 code toast + `throw ApiError`。业务层 `await api()` 直接拿到数据，**禁止 `if (response.code === 0)`**。需要捕获时 `try { await api() } catch (e) {/* 已 toast */ }`。
-2. **[R2] composable 拆分**：每个业务模块必须有 `use<Module>.ts`，view 的 `<script setup>` **不超过 50 行**，只做"import composable + 解构 + icon"。**跨模块**的 composable（权限判断、字典加载等通用 hook）统一放 `src/hooks/`，单模块的 composable 留在 `views/<module>/`，**不要混用**。Vue 圈子官方叫 "composable"，本项目目录名用 `hooks/`（更简短、与社区另一通行叫法一致），两个名字指同一种东西。
+1. **[R1] business code 收口**：axios 拦截器内判断业务成功码（默认 `code === 0`，需要时通过 `.env` 的 `VITE_API_SUCCESS_CODE` 覆盖适配不同后端）直接返回 `data.data`，其它 code toast + `throw ApiError`。业务层 `await api()` 直接拿到数据，**禁止 `if (response.code === 0)`**。需要捕获时 `try { await api() } catch (e) {/* 已 toast */ }`。
+2. **[R2] 逻辑抽离到 hook 文件**：每个页面都要配一个 `use<Module>.ts`，把加载数据、调接口、弹窗开关这类逻辑全放进去。页面本身的 `<script setup>` **不超过 50 行**，只干三件事——引入 hook、解构出要用的变量和方法、引入图标。hook 分两层存放：**多个模块共用的**（权限判断、字典加载之类）放 `src/hooks/`；**只给当前模块自己用的**放 `views/<模块名>/use<模块名>.ts`。两层别混。
 3. **[R3] ref over reactive**：所有响应式数据用 `ref()`。`reactive` 只允许在极少数确实需要 deep 引用的场景使用（默认拒绝）。
 4. **[R4] 加密集中**：RSA 公钥 / 分段算法 / 调用入口全部在 `utils/crypto.ts`；公钥从 `.env` 注入；其它文件不允许 `new JSEncrypt()`。
 5. **[R5] .env 收口**：应用标题、API 基址、超时、公钥、外部资源 URL 等所有可配置项都进 `.env`，禁止硬编码。
 6. **[R6] components vs custom-components**：通用原子组件（表格 / 搜索表单 / 远程下拉等）放 `src/components/`，由 `AppComponentsResolver` 自动注册，template 直接使用；业务封装（特定接口 / 特定字典 / 内置过滤）放 `src/custom-components/`，使用时显式 import。
 7. **[R7] UnoCSS 优先**：能用原子类完成的样式都用原子类（含 `!important` 前缀 `!h-[42px]`、伪类 `hover:!bg-white/10`、属性选择器 `[&_span]:!text-white` 等）。`<style scoped>` 只写**必须**用到的 element-plus 深度覆盖（`:deep(.el-input__wrapper)` 等）；禁止用 SCSS 实现可以用原子类解决的事。
-8. **[R8] 路由 meta.title 直接中文**：除非项目强制启用 i18n，否则 meta.title 用中文字符串，不要塞 `MSGG0002` 这种 key。Layout 与 document.title 同步直接读 meta.title。
+8. **[R8] 路由 meta.title 直接中文**：除非项目启用 i18n，否则 `meta.title` 直接写中文字符串（如 `'角色管理'`），不要填 i18n 的 key。页面标题和面包屑都从 `meta.title` 取，不再额外维护映射。
 9. **[R9] API 文件返回 T 不返回 AxiosResponse**：`request.post<UserInfo>(url)` 返回 `Promise<UserInfo>`。业务层 `const data = await getXxx()` 拿到的就是数据本身。这是拦截器收口的必然推论。
 10. **[R10] 错误已 toast**：业务层 `catch` 块通常**空块**（仅放注释 `// 错误已由 axios 拦截器统一 toast`），不要再 `ElMessage.error(...)` 一次。`finally` 处理 `submitting.value = false` 等状态清理。
 11. **[R11] store 模块禁止手动调 `localStorage`**：所有跨会话持久化通过 `defineStore` 第三参数的 `persist: { pick: [...] }` 配置（`pinia-plugin-persistedstate` 全局注册）。**不允许**出现 `localStorage.setItem(...)` / `localStorage.getItem(...)` / `localStorage.removeItem(...)` / `localStorage.clear()` 这类调用。退出登录用"in-memory state 重置"（`token.value = ''` 等），persistedstate 会自动把空值同步回 localStorage——不要用 `localStorage.clear()`，它会把跟登录态无关的偏好（语言 / 侧边栏 / 系统配置）一起误伤。
 12. **[R12] KeepAlive 策略不强制**：`Main.vue` 里 `<keep-alive>` 是用 `:include="keepAliveNames"` 白名单还是 `v-if="route.meta.keepAlive"` 条件分支，**由项目自己决定**，脚手架不作硬性要求。两种写法的取舍各有道理（白名单集中、分支显式），选择哪一种是项目内部的工程权衡，不属于"规范"层面。
+13. **[R13] 禁止桶式 re-export**：可以建 `index.ts`，但必须是真正的实现文件（如 `router/index.ts`、`store/index.ts`），不能是只做 `export * from './xxx'` 的纯转发桶。业务文件直接从子模块 import（`'@/utils/request'`、`'@/hooks/usePermission'`），不要通过中间层转一道。桶式转发容易把无关依赖拖进循环引用，也妨碍 IDE 跳转和 tree-shaking。
 
-## 反模式（A1–A12，明确禁止）
+## 反模式（A1–A13，明确禁止）
 
 > 这些编号是稳定 ID，被 `vue-scaffold-review` 报告引用。修改本节请保持编号不变。
 
@@ -163,12 +164,13 @@ allowed-tools:
 - ❌ **[A4]** view 文件里写 200 行业务逻辑 —— 抽出 `use<Module>.ts`
 - ❌ **[A5]** `<style scoped>` 写一大堆自定义 class —— 改 UnoCSS 原子类 + element-plus 属性
 - ❌ **[A6]** 业务下拉手写 `el-select` + `loadXxxOptions` + ref 数组 —— 封装到 `custom-components/`
-- ❌ **[A7]** `meta.title: 'MSGG0002'` —— 直接 `meta.title: '登录'`
+- ❌ **[A7]** `meta.title` 填 i18n 的 key 而不是直接写中文 —— 直接 `meta.title: '登录'`
 - ❌ **[A8]** `import t from i18n` 后通篇 `t('PUB_xxx')` —— 中文项目直接写中文
 - ❌ **[A9]** 把 fetch / 原生 XHR 与 axios 实例混用 —— 全部走 `request` / `requestWithLoading`
 - ❌ **[A10]** 在 `views/` 直接放业务接口的硬编码 URL —— 接口集中在模块同目录 `api.ts`
 - ❌ **[A11] store 里手动调 `localStorage.setItem(KEY, value)` / `localStorage.getItem(KEY)` / `localStorage.clear()`** —— 一律用 `defineStore(..., { persist: { pick: [...] } })` 走插件；退出清登录态用 in-memory state 重置，让 persistedstate 自动同步，不要 `localStorage.clear()` 误伤偏好
 - ❌ **[A12]** `import 'element-plus/dist/index.css'` / `import 'element-plus/theme-chalk/**.css'` —— 全量引入 element-plus CSS。规范用 `unplugin-vue-components` 的 `ElementPlusResolver` 按需自动 import 组件，CSS 由 `@rdeam/vite-plugin-element-plus-theme-builder` 编译成 `src/assets/generated/element-plus-theme.css`，在 `main.ts` 单次 import 即可。**业务文件任何位置都不应该 import element-plus 的 CSS**
+- ❌ **[A13]** 建纯转发桶文件 `index.ts`（里面只有 `export * from './xxx'`） —— 有实现逻辑的 `index.ts` 可以，纯转发的不要
 
 ## 执行流程（从 `pnpm create vite` 到可运行的 hello world 业务页）
 
@@ -184,6 +186,7 @@ cd <project-name>
 ```
 
 选项答疑（CLI 交互式提问时）：
+
 - Framework：`Vue`
 - Variant：`TypeScript`（**不要选 Customize / Router / Pinia 等附加选项**，本 skill 自带这些配置，让脚手架尽量保持最小骨架）
 
@@ -195,8 +198,6 @@ rm -rf src/assets src/components src/style.css
 rm -f src/App.vue src/main.ts public/vite.svg
 ```
 
-保留 `index.html` / `package.json` / `tsconfig*.json` / `vite.config.ts` / `.gitignore` —— 这些会在 Step 2 被本 skill 的模板**覆盖**或合并依赖。
-
 ### Step 2 — 建标准目录
 
 ```bash
@@ -206,6 +207,7 @@ mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,di
 ### Step 3 — 覆盖配置文件
 
 按 `references/config-files.md` 用本 skill 规范**覆盖**脚手架默认产物：
+
 1. `package.json`（依赖清单完整复制，包名替换为 `<project-name>`；Vite 默认只有 `vue` + `vue-tsc`，需要补齐 element-plus / unocss / pinia / vue-router / jsencrypt 等全部依赖）
 2. `tsconfig.json` / `tsconfig.app.json` / `tsconfig.node.json`（开启 `noUnusedLocals` 等严格规范）
 3. `vite.config.ts`（覆盖默认版本，加 alias / 插件 / 代理）
@@ -218,6 +220,7 @@ mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,di
 ### Step 4 — 写核心工具
 
 按 `references/core-utils.md` 写：
+
 - `src/utils/request.ts` —— 含 `ApiError` 类、`Request` 接口、`request` / `requestWithLoading`。**文件名是 `request.ts` 而不是 `axios.ts`** —— 命名描述职责（"封装请求"），不绑定底层库；将来换 fetch / undici 文件名不变
 - `src/utils/crypto.ts` —— `rsaEncryptChunks` + `encryptPayload`
 - `src/utils/format.ts` —— `emptyText` / `formatDateTime` 等显示型格式化辅助（**不要预置分页、字典封装**——它们与后端字段约定强绑定，按各项目沉淀；**文件相关的下载 / 转换 / 大小格式化等需要时统一收口到 `utils/file.ts`**，不预置、也不拆成多个小文件）。**[S-utils-naming]** 禁用泛名 `common.ts` / `helpers.ts`——啥都能装 = 啥都不该装
@@ -228,6 +231,7 @@ mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,di
 ### Step 5 — 写 router / store
 
 按 `references/router-store.md` 写：
+
 - `src/store/index.ts` + `app.ts` + `auth.ts`
 - `src/router/index.ts`（白名单 / 守卫 / 面包屑 / document.title）
 - `src/api/index.ts` —— 仅放跨模块通用接口（如 `logoutApi`）；业务模块自己的接口写到 `src/views/<module>/api.ts`
@@ -235,6 +239,7 @@ mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,di
 ### Step 6 — 写 Layout 与 system-views
 
 按 `references/layout-and-system-views.md` 写：
+
 - 整个 Layout 主框架
 - 登录 / 注册 / 重置密码三套 system-views（含 useLogin / useRegister 等 composable）
 
@@ -286,6 +291,7 @@ pnpm dev
 ```
 
 打开 `http://localhost:5173`，应能：
+
 - 看到登录页（背景图 + 玻璃卡片）
 - 浏览器 tab 显示 `登录 - <VITE_APP_TITLE>`
 - 路由跳转、面包屑、菜单正常
@@ -317,6 +323,7 @@ pnpm dev
 ## 业务下拉 / 状态字典如何下沉为组件
 
 范式（详见子 skill `vue-scaffold-component`）：
+
 - 包一层 `RemoteSearch`，固定 `url` / `labelKey` / `valueKey`
 - 默认 `dataCallback` 做项目级过滤（例如只保留某条业务线下的选项）
 - 透传 `context.attrs`，允许调用方覆盖默认行为
@@ -336,6 +343,7 @@ pnpm dev
 ## 引用文件
 
 详细模板与代码片段：
+
 - `references/config-files.md`
 - `references/core-utils.md`
 - `references/router-store.md`

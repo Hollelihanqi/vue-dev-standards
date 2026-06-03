@@ -26,7 +26,7 @@ allowed-tools:
 **默认情况下，一个菜单目录（`src/views/<menu>/`）下只有 ONE 个主 composable 文件**：`use<Menu>.ts`，导出 `use<Menu>()`。它承载列表页的所有顶层交互（搜索、分页、行操作编排、所有弹层 / 抽屉的 visibility 与 submit handler）。
 
 - ✅ **绝大多数模块就一个 composable 文件，到此为止。**
-- ✅ 唯一允许的额外 composable：**有独立路由的详情页里出现复杂操作流**（审批流 / 多阶段编辑 / 多 tab 状态同步等）时，允许追加 `use<Menu>Detail.ts`。**仅此一种例外**，且应是少数。
+- ✅ 唯一允许的额外 composable：**独立路由的页面**——详情页出现复杂操作流（审批流 / 多阶段编辑 / 多 tab 状态同步等）时追加 `use<Menu>Detail.ts`，独立路由的表单页追加 `use<Menu>Form.ts`。**仅路由页例外**，且应是少数。
 - ❌ **每个 `.vue` 文件配一个 composable —— 错。** Dialog / Drawer / Form 子组件 **不允许** 有伴生 composable。它们的状态自己持有（见下"分层契约"和"Dialog 自包含"）。
 - ❌ **看到 `useXxxDialog.ts` / `useXxxDrawer.ts` / `useXxxModal.ts` / `useXxxForm.ts`（除非 Form 是独立路由页）—— 这就是反模式本身，名字一出现就错了**。
 
@@ -36,17 +36,19 @@ allowed-tools:
 
 ### 分层契约
 
-| 层 | 持有的状态 | 持有的逻辑 |
-|---|---|---|
-| **主业务 composable**<br>`use<Menu>`（一个菜单一个） | 列表数据 / 分页 / 查询 / 子操作的 visibility / 当前编辑行 id | 调 API + 刷列表 + 业务编排（决定调 create 还是 update、成功后是否 refresh） |
-| **子业务组件**<br>`<EntityName>EditDialog.vue` / `<EntityName>Drawer.vue` 等<br>**🚫 没有伴生 composable** | 表单 formModel / submitting / formRef / rules / validators | 表单校验 / UI 状态自管 / 通过 `props.onSubmit` 把 payload 抛给父端 |
+| 层                                                                                                         | 持有的状态                                                   | 持有的逻辑                                                                  |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| **主业务 composable**<br>`use<Menu>`（一个菜单一个）                                                       | 列表数据 / 分页 / 查询 / 子操作的 visibility / 当前编辑行 id | 调 API + 刷列表 + 业务编排（决定调 create 还是 update、成功后是否 refresh） |
+| **子业务组件**<br>`<EntityName>EditDialog.vue` / `<EntityName>Drawer.vue` 等<br>**🚫 没有伴生 composable** | 表单 formModel / submitting / formRef / rules / validators   | 表单校验 / UI 状态自管 / 通过 `props.onSubmit` 把 payload 抛给父端          |
 
 **主业务 composable 不知道**：
+
 - 表单字段长什么样、有什么校验规则
 - 弹窗的尺寸 / 标题 / 按钮文案
 - 校验器（`integerValidator` 之类）的实现细节
 
 **子业务组件不知道**：
+
 - 提交后调的是哪个接口（create 还是 update）
 - 提交后是否需要刷新列表
 - 当前登录用户是谁、要不要带 operator 字段
@@ -57,45 +59,49 @@ Dialog 通过 `onSubmit` 函数 prop 接收父端提交逻辑，自己 `await` �
 
 ```ts
 // Dialog
-const visible = defineModel<boolean>({ default: false })
+const visible = defineModel<boolean>({ default: false });
 const props = defineProps<{
   // ...其它 props，如 userId / roleId
-  onSubmit: (payload: PayloadType) => Promise<void>
-}>()
+  onSubmit: (payload: PayloadType) => Promise<void>;
+}>();
 
-const submitting = ref(false)
+const submitting = ref(false);
 
 const handleSubmit = async () => {
-  if (submitting.value) return
-  await formRef.value?.validate()
-  submitting.value = true
+  if (submitting.value) return;
+  await formRef.value?.validate();
+  submitting.value = true;
   try {
-    await props.onSubmit(buildPayload())
-    visible.value = false
+    await props.onSubmit(buildPayload());
+    visible.value = false;
   } catch {
     // 失败时保持打开，错误已由 axios 拦截器 toast，用户改字段后可重试
   } finally {
-    submitting.value = false  // ✅ 一定执行，永远不会卡 loading
+    submitting.value = false; // ✅ 一定执行，永远不会卡 loading
   }
-}
+};
 ```
 
 ```ts
 // 父端列表 composable
 const handleEditSubmit = async (payload: PayloadType) => {
   if (currentId.value) {
-    await api.updateItem({ ...payload, id: currentId.value })
+    await api.updateItem({ ...payload, id: currentId.value });
   } else {
-    await api.createItem(payload)
+    await api.createItem(payload);
   }
-  ElMessage.success('保存成功')
-  refresh()
-}
+  ElMessage.success("保存成功");
+  refresh();
+};
 ```
 
 ```vue
 <!-- 父端模板 -->
-<XxxDialog v-model="editVisible" :id="currentId" :on-submit="handleEditSubmit" />
+<XxxDialog
+  v-model="editVisible"
+  :id="currentId"
+  :on-submit="handleEditSubmit"
+/>
 ```
 
 ### 什么时候 NOT 应用这个模式（同样重要）
@@ -115,27 +121,28 @@ const handleEditSubmit = async (payload: PayloadType) => {
 ## 前置假设（不满足时报错）
 
 调用本 skill 前，目标项目应当已经具备：
+
 1. `src/components/pro-table` 通用增强表格（含 search-form 集成、分页、刷新）
-2. `src/utils/axios.ts` 拦截器收口（业务层 await 直接拿数据）
+2. `src/utils/request.ts` 拦截器收口（业务层 await 直接拿数据）
 3. `src/router/index.ts` 用 Layout 包业务页
 
 如果上述任一不满足，提示用户先按 `vue-scaffold-app` 主 skill 完成基础设施搭建。
 
-> **分页参数 / 返回结构按各项目后端约定来**——脚手架不预置 `createPagePayload` / `pickPageResult`。本 skill 生成 `api.ts` 时如果项目里已经有同类封装就复用；没有就在该模块的 `api.ts` 里直接组装 payload、直接 pick `{ items, total }`，等项目里出现 2–3 个稳定用法再考虑下沉到 `utils/common.ts`。
+> **分页参数 / 返回结构按各项目后端约定来**——脚手架不预置 `createPagePayload` / `pickPageResult`。本 skill 生成 `api.ts` 时如果项目里已经有同类封装就复用；没有就在该模块的 `api.ts` 里直接组装 payload、直接 pick `{ items, total }`，等项目里出现 2–3 个稳定用法再考虑下沉到 `utils/` 下按职责命名的文件（如 `utils/pagination.ts`）——**不要用泛名 `common.ts` / `helpers.ts`**（见 vue-scaffold-app `[S-utils-naming]`）。
 
 ## 输入参数
 
 调用时尽量从用户描述里抽取以下信息；缺失则向用户提问（AskUserQuestion）：
 
-| 参数 | 含义 | 示例 |
-|---|---|---|
-| `moduleName` | 模块名（kebab-case） | `role-management` |
-| `entityName` | 业务实体名（PascalCase） | `Role` |
-| `displayName` | 中文菜单名 | "角色管理" |
-| `listFields` | 列表展示的字段（中英对照） | `roleName=角色名`, `description=描述` |
-| `searchFields` | 查询条件字段 | `roleName / status` |
-| `actions` | 行操作（create/edit/delete/view 等） | `create + edit + delete` |
-| `apiPrefix` | 接口 URL 前缀 | `/xxx/sys/v1/role` |
+| 参数           | 含义                                 | 示例                                  |
+| -------------- | ------------------------------------ | ------------------------------------- |
+| `moduleName`   | 模块名（kebab-case）                 | `role-management`                     |
+| `entityName`   | 业务实体名（PascalCase）             | `Role`                                |
+| `displayName`  | 中文菜单名                           | "角色管理"                            |
+| `listFields`   | 列表展示的字段（中英对照）           | `roleName=角色名`, `description=描述` |
+| `searchFields` | 查询条件字段                         | `roleName / status`                   |
+| `actions`      | 行操作（create/edit/delete/view 等） | `create + edit + delete`              |
+| `apiPrefix`    | 接口 URL 前缀                        | `/xxx/sys/v1/role`                    |
 
 ## 标准产物
 
@@ -152,7 +159,6 @@ src/views/<menu-name>/
 ```
 
 > 按需生成，没有该动作的就别建空文件。
-> **看不到 `use<EntityName>Dialog.ts` / `use<EntityName>Drawer.ts` / `use<EntityName>Form.ts`（除非 Form 是独立路由页）/ `use<EntityName>Modal.ts` —— 这不是遗漏，是规定**。
 
 ### Composable 文件拆分原则
 
@@ -161,6 +167,7 @@ src/views/<menu-name>/
 允许追加的唯一情况：详情页是独立路由 **且** 内部有复杂操作流（审批流、多阶段编辑、多 tab 状态同步等），追加 `use<Menu>Detail.ts`。**没有复杂操作流的详情页，逻辑直接写在 `.vue` 的 `<script setup>` 里**，不要为了"对称"造 composable。
 
 ✅ 标准形态：
+
 ```
 src/views/energy-value/
 ├── useEnergyValue.ts          → 导出 useEnergyValue（列表 + 充值 Dialog 的 visibility 与 submit handler）
@@ -168,6 +175,7 @@ src/views/energy-value/
 ```
 
 ✅ 复杂详情页（少见）：
+
 ```
 src/views/contract-approval/
 ├── useContractApproval.ts      → 列表
@@ -175,6 +183,7 @@ src/views/contract-approval/
 ```
 
 ❌ 反例 1（按组件拆 composable —— 状态散落）：
+
 ```
 src/views/energy-value/
 ├── useEnergyValue.ts
@@ -183,6 +192,7 @@ src/views/energy-value/
 ```
 
 ❌ 反例 2（每个 .vue 都配一个 composable）：
+
 ```
 useNoticeManagement.ts
 useNoticeEditDialog.ts   ← ❌ Dialog 不需要伴生 composable
@@ -193,31 +203,17 @@ useNoticeDetail.ts       ← ❌ 没有复杂操作流的详情页不需要 comp
 
 ### Dialog 模式 vs 路由表单模式
 
-| 场景 | 推荐 | 文件 |
-|---|---|---|
-| 字段少、操作快、不离开列表上下文 | **Dialog 弹窗** | `<EntityName>EditDialog.vue` + 主 composable 里加 `handleEditSubmit` handler |
-| 富文本编辑 / 字段超多 / 需要专注的输入流程 | **独立路由页** | `<EntityName>Form.vue` + `use<EntityName>Form.ts` |
+| 场景                                       | 推荐            | 文件                                                                         |
+| ------------------------------------------ | --------------- | ---------------------------------------------------------------------------- |
+| 字段少、操作快、不离开列表上下文           | **Dialog 弹窗** | `<EntityName>EditDialog.vue` + 主 composable 里加 `handleEditSubmit` handler |
+| 富文本编辑 / 字段超多 / 需要专注的输入流程 | **独立路由页**  | `<EntityName>Form.vue` + `use<EntityName>Form.ts`                            |
 
 ## 生成步骤
-
-### Step 0 — 读现有惯例（必做）
-
-在生成之前，**至少读一个项目内已有的业务模块** 作为本次生成的风格基准。优先顺序：
-1. 用户在 prompt 中指定的"参考模块"
-2. 项目里命名最相似的模块
-3. 项目里最新创建的模块（按 git log）
-
-读取以下文件并对齐其风格：
-- 该模块的 `api.ts` —— 看 request 用法、类型签名、分页 payload / 返回结构的本项目约定
-- 该模块的 `constants.tsx` —— 看 search-form 控件类型、columns formatText / render 模式
-- 该模块的 `use<Module>.ts` —— 看 composable 返回结构、字典加载模式、handlexxx 方法命名
-- 该模块的 `<Module>List.vue` —— 看 template 中 pro-table 用法、dialog 挂载位置
-
-**不要凭主 skill 的模板生成**，要以**项目内现存惯例**为准。主 skill 的 references 是兜底，项目里有更新的写法时跟项目走。
 
 ### Step 1 — api.ts
 
 **严格遵守**：
+
 - **函数名统一标准化**：`getList` / `getDetail` / `createItem` / `updateItem` / `deleteItem`，**不要加实体名前缀**（模块目录已经是命名空间了）
 - **不在 api.ts 里定义响应 Item 接口**：只定义"前端控制"的类型（payload / query）；响应行 / 详情的类型在使用处声明（见 Step 3）
 - **分页 payload / 返回结构按本项目后端约定来**——脚手架不预置 `createPagePayload` / `pickPageResult`。如果项目里已经沉淀了同类封装就复用；没有就在本文件里直接组装、直接 pick `{ items, total }`
@@ -226,7 +222,7 @@ useNoticeDetail.ts       ← ❌ 没有复杂操作流的详情页不需要 comp
 - 调用方**建议**用 `import * as api from './api'` 命名空间引入，使用时 `api.getList(...)` / `api.createItem(...)`——模块名通过目录路径承载、函数名保持简短统一，读起来更清楚。**这是推荐写法，不是强制要求**：用 `import { getList, createItem } from './api'` 命名导入也行，选哪种由项目自己定
 
 ```ts
-import { request, requestWithLoading } from '@/utils/axios'
+import { request, requestWithLoading } from '@/utils/request'
 
 // 只定义"前端控制"的类型：query、payload
 export interface <EntityName>Query {
@@ -271,24 +267,25 @@ export const deleteItem = (id: string | number) =>
 
 #### 接口类型定义的边界
 
-| 类型 | 在哪声明 | 写多严格 |
-|---|---|---|
-| **请求 payload**（创建 / 更新发送给后端的对象） | `api.ts` 里 `interface XxxPayload` | **严格**，前端控制 |
-| **请求 query**（列表查询条件、详情参数等） | `api.ts` 里 `interface XxxQuery` | **严格**，前端控制 |
-| **响应 Item**（后端列表行 / 详情对象） | **不在 api.ts 里定义** | 在使用处按需声明（见下） |
+| 类型                                            | 在哪声明                           | 写多严格                 |
+| ----------------------------------------------- | ---------------------------------- | ------------------------ |
+| **请求 payload**（创建 / 更新发送给后端的对象） | `api.ts` 里 `interface XxxPayload` | **严格**，前端控制       |
+| **请求 query**（列表查询条件、详情参数等）      | `api.ts` 里 `interface XxxQuery`   | **严格**，前端控制       |
+| **响应 Item**（后端列表行 / 详情对象）          | **不在 api.ts 里定义**             | 在使用处按需声明（见下） |
 
 #### 在使用处怎么标注 row 类型（**不要默认用裸 `any`**）
 
 `any` 是放弃所有类型信息的特殊场景退路，不是默认值。按下面表选合适的标注：
 
-| 场景 | 怎么写 | 例子 |
-|---|---|---|
-| **业务 handler，依赖具体字段** | **inline 类型，只列依赖的字段** | `(row: { roleId?: string \| number; id?: string \| number }) => { ... }` |
-| **column callback / formatText，纯透传给显示** | `Record<string, any>` | `(row: Record<string, any>) => emptyText(row.someField)` |
-| **持有响应数据的 ref / state** | `Record<string, any>` 或 `Record<string, any>[]` | `const detail = ref<Record<string, any>>({})` |
-| **normalize / parse 工具函数的入口参数** | `any`（这是 `any` 合理的少数场景） | `const normalizeList = (payload: any) => { ... }` |
+| 场景                                           | 怎么写                                           | 例子                                                                     |
+| ---------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------ |
+| **业务 handler，依赖具体字段**                 | **inline 类型，只列依赖的字段**                  | `(row: { roleId?: string \| number; id?: string \| number }) => { ... }` |
+| **column callback / formatText，纯透传给显示** | `Record<string, any>`                            | `(row: Record<string, any>) => emptyText(row.someField)`                 |
+| **持有响应数据的 ref / state**                 | `Record<string, any>` 或 `Record<string, any>[]` | `const detail = ref<Record<string, any>>({})`                            |
+| **normalize / parse 工具函数的入口参数**       | `any`（这是 `any` 合理的少数场景）               | `const normalizeList = (payload: any) => { ... }`                        |
 
 **inline 类型 vs `Record<string, any>` 选用准则**：
+
 - handler 有**条件判断 / 路由跳转 / 提交字段**依赖某些字段 → 用 inline 类型，把依赖明确写在签名上
 - callback 只是把 row 喂给 formatText / render 显示 → 用 `Record<string, any>`，更诚实地表示"这是个对象，但具体字段我不关心"
 - **裸 `any` 在业务代码里应该被视为代码 review 红线**
@@ -369,10 +366,12 @@ export const create<EntityName>Columns = ({
 业务逻辑全部在 composable，view 仅做装配。
 
 **命名**：文件名 = 菜单 / 业务名，**不带组件形态后缀**：
+
 - ✅ `useEnergyValue.ts` / `useRoleManagement.ts` / `useNoticeManagement.ts`
 - ❌ `useEnergyRechargeDialog.ts` / `useRoleEditDrawer.ts` —— 名字一带 `Dialog` / `Drawer` 就错了
 
 **职责**：
+
 - 持有列表所有顶层状态：tableRef、分页参数、查询条件
 - 持有所有弹层的 visibility 和当前操作行 id（如 `editDialogVisible`、`editingRow`）
 - 持有所有 submit handler（`handleEditSubmit` 等）—— 在这里决定调 `createItem` 还是 `updateItem`、成功后是否 `refresh()`
@@ -443,7 +442,7 @@ export const use<Menu> = () => {
 
 ### Step 4 — \<EntityName\>List.vue
 
-template 部分用 `pro-table` + `search-form` 复合；script setup 控制在 30 行内。
+template 部分用 `pro-table` + `search-form` 复合；script setup 仅做装配，不超过 50 行（见强制规则 5）。
 
 **模板根节点规范（强制）**：
 
@@ -481,8 +480,9 @@ template 部分用 `pro-table` + `search-form` 复合；script setup 控制在 3
 </template>
 
 <script setup lang="ts">
-const <EntityName>EditDialog = defineAsyncComponent(() => import('./<EntityName>EditDialog.vue'))
 import { use<EntityName> } from './use<EntityName>'
+
+const <EntityName>EditDialog = defineAsyncComponent(() => import('./<EntityName>EditDialog.vue'))
 
 const {
   columns,
@@ -511,6 +511,7 @@ const {
 这是最容易犯的错误，单独点名：
 
 ❌ **错误结构**：
+
 ```
 src/views/energy-value/
 ├── useEnergyValue.ts
@@ -539,96 +540,124 @@ export const useEnergyRechargeDialog = (options: { afterSuccess?: () => Promise<
 ```vue
 <!-- ✅ EnergyRechargeDialog.vue —— 所有状态在这里 -->
 <script setup lang="ts">
-import type { FormInstance, FormRules } from 'element-plus'
+import type { FormInstance, FormRules } from "element-plus";
 
 interface EnergyRechargeFormModel {
-  chainAccountAddress: string
-  gas: number
-  remarks: string
+  chainAccountAddress: string;
+  gas: number;
+  remarks: string;
 }
 
 const createInitialModel = (): EnergyRechargeFormModel => ({
-  chainAccountAddress: '',
+  chainAccountAddress: "",
   gas: 1,
-  remarks: '',
-})
+  remarks: "",
+});
 
-const visible = defineModel<boolean>({ default: false })
+const visible = defineModel<boolean>({ default: false });
 const props = defineProps<{
-  onSubmit: (payload: EnergyRechargeFormModel) => Promise<void>
-}>()
+  onSubmit: (payload: EnergyRechargeFormModel) => Promise<void>;
+}>();
 
-const formRef = useTemplateRef<FormInstance>('formRef')
-const submitting = ref(false)
-const formModel = ref<EnergyRechargeFormModel>(createInitialModel())
+const formRef = useTemplateRef<FormInstance>("formRef");
+const submitting = ref(false);
+const formModel = ref<EnergyRechargeFormModel>(createInitialModel());
 
-const integerValidator = (_rule: unknown, value: number, callback: (e?: Error) => void) => {
+const integerValidator = (
+  _rule: unknown,
+  value: number,
+  callback: (e?: Error) => void,
+) => {
   if (!Number.isInteger(Number(value)) || Number(value) < 1) {
-    callback(new Error('充值能量值必须为正整数'))
-    return
+    callback(new Error("充值能量值必须为正整数"));
+    return;
   }
-  callback()
-}
+  callback();
+};
 
 const rules: FormRules = {
-  chainAccountAddress: [{ required: true, message: '请输入链账户地址', trigger: 'blur' }],
-  gas: [
-    { required: true, type: 'number', message: '请输入充值能量值', trigger: 'change' },
-    { validator: integerValidator, trigger: 'change' },
+  chainAccountAddress: [
+    { required: true, message: "请输入链账户地址", trigger: "blur" },
   ],
-  remarks: [{ required: true, whitespace: true, message: '请输入备注', trigger: 'blur' }],
-}
+  gas: [
+    {
+      required: true,
+      type: "number",
+      message: "请输入充值能量值",
+      trigger: "change",
+    },
+    { validator: integerValidator, trigger: "change" },
+  ],
+  remarks: [
+    {
+      required: true,
+      whitespace: true,
+      message: "请输入备注",
+      trigger: "blur",
+    },
+  ],
+};
 
 const resetForm = () => {
-  formModel.value = createInitialModel()
-  nextTick(() => formRef.value?.clearValidate())
-}
+  formModel.value = createInitialModel();
+  nextTick(() => formRef.value?.clearValidate());
+};
 
 const handleSubmit = async () => {
-  if (submitting.value) return
-  await formRef.value?.validate()
-  submitting.value = true
+  if (submitting.value) return;
+  await formRef.value?.validate();
+  submitting.value = true;
   try {
-    await props.onSubmit({ ...formModel.value })
-    visible.value = false
+    await props.onSubmit({ ...formModel.value });
+    visible.value = false;
   } catch {
     // 保持打开，axios 已 toast
   } finally {
-    submitting.value = false
+    submitting.value = false;
   }
-}
+};
 </script>
 ```
 
 ```ts
 // ✅ useEnergyValue.ts —— 主 composable 仅持有"决定调哪个 API + 刷列表"的编排
 export const useEnergyValue = () => {
-  const tableRef = useTemplateRef<any>('tableRef')
-  const rechargeVisible = ref(false)
+  const tableRef = useTemplateRef<any>("tableRef");
+  const rechargeVisible = ref(false);
 
-  const refresh = () => tableRef.value?.updateTableData?.()
-  const openRecharge = () => { rechargeVisible.value = true }
+  const refresh = () => tableRef.value?.updateTableData?.();
+  const openRecharge = () => {
+    rechargeVisible.value = true;
+  };
 
-  const handleRechargeSubmit = async (payload: { chainAccountAddress: string; gas: number; remarks: string }) => {
+  const handleRechargeSubmit = async (payload: {
+    chainAccountAddress: string;
+    gas: number;
+    remarks: string;
+  }) => {
     await api.createItem({
       chainAccountAddress: payload.chainAccountAddress,
       gas: Math.trunc(Number(payload.gas)),
       remarks: payload.remarks.trim(),
-    })
-    ElMessage.success('充值操作已提交')
-    refresh()
-  }
+    });
+    ElMessage.success("充值操作已提交");
+    refresh();
+  };
 
-  return { rechargeVisible, openRecharge, handleRechargeSubmit, /* ... */ }
-}
+  return { rechargeVisible, openRecharge, handleRechargeSubmit /* ... */ };
+};
 ```
 
 ```vue
 <!-- ✅ 列表页装配：rechargeVisible + handleRechargeSubmit 注入 Dialog -->
-<EnergyRechargeDialog v-model="rechargeVisible" :on-submit="handleRechargeSubmit" />
+<EnergyRechargeDialog
+  v-model="rechargeVisible"
+  :on-submit="handleRechargeSubmit"
+/>
 ```
 
 **自检清单**（生成前对照）：
+
 - [ ] 模块目录里**没有**任何 `use*Dialog.ts` / `use*Drawer.ts` / `use*Modal.ts` 文件
 - [ ] Dialog `.vue` 的 `<script setup>` 里能看到 `formModel` / `submitting` / `rules` / 自定义 validators
 - [ ] 主 composable 里**只有** `xxxVisible` 和 `handleXxxSubmit`，没有 `formModel` / `formRef`
@@ -644,16 +673,26 @@ export const useEnergyValue = () => {
     destroy-on-close
     @open="resetForm"
   >
-    <el-form ref="formRef" :model="formModel" :rules="rules" label-width="120px">
+    <el-form
+      ref="formRef"
+      :model="formModel"
+      :rules="rules"
+      label-width="120px"
+    >
       <el-form-item label="名称" prop="name">
-        <el-input v-model="formModel.name" maxlength="32" show-word-limit placeholder="请输入名称" />
+        <el-input
+          v-model="formModel.name"
+          maxlength="32"
+          show-word-limit
+          placeholder="请输入名称"
+        />
       </el-form-item>
     </el-form>
 
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
       <el-button type="primary" :loading="submitting" @click="handleSubmit">
-        {{ row ? '保存' : '创建' }}
+        {{ row ? "保存" : "创建" }}
       </el-button>
     </template>
   </el-dialog>
@@ -760,19 +799,6 @@ const handleSubmit = async () => {
 
 1. **业务下拉一律用组件，不在 constants 里硬塞 options**：需要远程下拉时调 `vue-scaffold-component` 子 skill 先封装一个，再在 constants `render` 里用
 2. **api 文件函数名统一标准化**：`getList` / `getDetail` / `createItem` / `updateItem` / `deleteItem`，**不加实体名前缀**。引入风格上 **推荐** `import * as api from './api'` + `api.getList(...)`（更清楚、不用频繁改 import），但**不强制** —— 命名导入 `import { getList } from './api'` 同样可接受
-
-> **🛑 composable 命名禁区（最强规则，独立列出）**：
-> - composable 文件名 **按业务 / 菜单 / 视图** 命名：`useEnergyValue.ts` / `useRoleManagement.ts`
-> - composable 文件名 **绝不带组件形态后缀**：`useXxxDialog.ts` / `useXxxDrawer.ts` / `useXxxModal.ts` / `useXxxPopover.ts` —— **看到这种命名就回退，把状态搬回组件内部**
-> - 一个菜单目录 **默认只有一个** 主 composable 文件（`use<Menu>.ts`）；详情页有复杂操作流时可追加 `use<Menu>Detail.ts`，**仅此一种例外**
-> - Dialog / Drawer / Form（非独立路由）/ Modal —— **没有伴生 composable**。它们的状态（formModel / submitting / rules / validators）100% 自包含在 `.vue` 文件里
->
-> **模块目录内文件命名约定**：
-> - **`use<Menu>.ts`** / **`use<Menu>Detail.ts`** —— composable，**驼峰** + `use` 前缀，**按业务命名**
-> - **`<EntityName>List.vue`** / **`<EntityName>EditDialog.vue`** —— Vue 组件，**PascalCase**
-> - **`api.ts`** / **`constants.tsx`** —— 模块固定四件套，**全小写**
-> - **其它工具 / 共享辅助 `.ts`**（如 `role-resource.ts` / `notice-format.ts`）—— 既不是 composable，也不是组件，**用 kebab-case** 跟前两类区别开。看到 kebab 命名一眼知道"这是个纯函数集 / 数据辅助"，不是带响应式状态的 hook。
->
 3. **api 文件返回 Promise<T>**，不包 ApiResponse
 4. **composable 名字必须以 `use` 开头**
 5. **view 的 `<script setup>` 不超过 50 行**，超过就该拆 composable
@@ -784,6 +810,20 @@ const handleSubmit = async () => {
 11. **view 模板根 `<div>` 必须挂 `view-w`**：这是 view 页面的统一标识类，缺了就不算合规 view
 12. **Dialog / Drawer 等弹层组件挂在 view-w 同级，不嵌进根 `<div>` 里**：Vue 3 多根节点写法 —— view-w 装"页面主体"，弹层装"覆盖层"，结构分明
 13. **禁止自定义 `<style scoped>` class**：UnoCSS 原子类已经够用，`<style scoped>` 只能放 element-plus 深度覆盖（`:deep(...)`）。任何 `.system-xxx-page { min-height: 0 }` 这种自定义 class 都是反模式
+
+> **🛑 composable 命名禁区（最强规则）**：
+>
+> - composable 文件名 **按业务 / 菜单 / 视图** 命名：`useEnergyValue.ts` / `useRoleManagement.ts`
+> - composable 文件名 **绝不带组件形态后缀**：`useXxxDialog.ts` / `useXxxDrawer.ts` / `useXxxModal.ts` / `useXxxPopover.ts` —— **看到这种命名就回退，把状态搬回组件内部**
+> - 一个菜单目录 **默认只有一个** 主 composable 文件（`use<Menu>.ts`）；独立路由的详情页（复杂操作流）/ 表单页可分别追加 `use<Menu>Detail.ts` / `use<Menu>Form.ts`，**仅路由页例外**
+> - Dialog / Drawer / Form（非独立路由）/ Modal —— **没有伴生 composable**。它们的状态（formModel / submitting / rules / validators）100% 自包含在 `.vue` 文件里
+>
+> **模块目录内文件命名约定**：
+>
+> - **`use<Menu>.ts`** / **`use<Menu>Detail.ts`** —— composable，**驼峰** + `use` 前缀，**按业务命名**
+> - **`<EntityName>List.vue`** / **`<EntityName>EditDialog.vue`** —— Vue 组件，**PascalCase**
+> - **`api.ts`** / **`constants.tsx`** —— 模块固定四件套，**全小写**
+> - **其它工具 / 共享辅助 `.ts`**（如 `role-resource.ts` / `notice-format.ts`）—— 既不是 composable，也不是组件，**用 kebab-case** 跟前两类区别开。看到 kebab 命名一眼知道"这是个纯函数集 / 数据辅助"，不是带响应式状态的 hook。
 
 ## 反模式
 

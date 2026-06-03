@@ -24,7 +24,7 @@ allowed-tools:
 
 ### 1. 规范来源单一：永远读规范 skill 本身
 
-本 skill **不复制任何规则**。每次执行先 Read `<本仓库>/skills/vue-scaffold-app/SKILL.md` 与其 `references/*.md`（`R1`–`R12`、`A1`–`A11`、`S-*`），再 Read `<本仓库>/skills/vue-scaffold-layout/SKILL.md`（`L1`–`L6`），从中提取编号的当前定义。
+本 skill **不复制任何规则**。每次执行先 Read `<本仓库>/skills/vue-scaffold-app/SKILL.md` 与其 `references/*.md`（`R1`–`R12`、`A1`–`A12`、`S-*`，其中 `A12` 为禁止全量引入 element-plus CSS），再 Read `<本仓库>/skills/vue-scaffold-layout/SKILL.md`（`L1`–`L6`），从中提取编号的当前定义。
 
 规范文档改了，本 skill 自动跟着改，**零同步成本**。
 
@@ -38,7 +38,7 @@ allowed-tools:
 
 | 层 | 检测手段 | 适用规则 |
 |---|---|---|
-| 第一层 | 机械 grep | A1–A11 反模式（正则一打就中） |
+| 第一层 | 机械 grep | A1–A12 反模式（正则一打就中） |
 | 第二层 | Glob + 文件名比对 | S-* 结构 / 命名规则 |
 | 第三层 | Read + 语义判断 | R1–R12 需要理解上下文的硬规则 |
 
@@ -72,7 +72,7 @@ allowed-tools:
 
 从中提取：
 - R1–R12 的最新文字
-- A1–A11 的最新文字
+- A1–A12 的最新文字
 - S-* 的最新文字与所在锚点的具体约束
 - L1–L6 的最新文字（来自 `vue-scaffold-layout`）
 
@@ -88,12 +88,15 @@ allowed-tools:
 - **默认（全量）**：`Glob` 命中 `src/**/*.{vue,ts,tsx}`，排除：
   - `node_modules/` / `dist/`
   - `src/types/`（自动生成的 d.ts）
-  - `src/assets/generated/`（ep 主题插件产出）
+  - `src/components/` / `src/custom-components/`（基础组件与业务封装组件，不纳入审查）
+  - `src/assets/`（静态资源）
 - **指定路径**：`Glob` 命中 `<path>/**/*.{vue,ts,tsx}`，同样应用上面的排除规则
+
+> 因 `components` / `custom-components` 不扫描，R6（组件归属）不在本 skill 检查范围。
 
 把命中文件列出来（chat 里显示数量与示例 3–5 个文件名，避免刷屏）。**不调用任何 git 命令**——不读 HEAD、不比 diff、不依赖分支。
 
-### Step 3 — 第一层：机械 grep（A1–A11）
+### Step 3 — 第一层：机械 grep（A1–A12）
 
 按 `references/grep-patterns.md` 的清单逐条跑 `Grep`。每条规则带：
 - 正则
@@ -119,7 +122,6 @@ allowed-tools:
 逐条 Read 命中文件，按规则定义判断。重点：
 - **R2** 行数：解析 `.vue` 文件的 `<script setup>` 段，计算非空非注释行数，超 50 即违规
 - **R2** composable 拆分：检查 `views/<m>/` 是否存在 `use<M>.ts`；不存在但 `<M>List.vue` 有 >30 行业务逻辑即违规
-- **R6** components 归属：Read `src/components/*` 与 `src/custom-components/*`，按"是否依赖具体业务 API / 字典"判断归属是否正确
 - **R7** UnoCSS 优先：Read `.vue` 的 `<style scoped>`，统计行数与是否在做"可用原子类替代"的事
 - **R10** 错误已 toast：Grep `catch.*ElMessage\.error` 找疑似双重 toast，再 Read 上下文确认
 
@@ -172,8 +174,8 @@ L1–L6 多数可机械 grep，少数需 Read 判断。按下表执行（具体�
 
 | 级别 | 含义 | 包含规则 |
 |---|---|---|
-| 🔴 严重 | 反模式 / 不可违背 | A1–A11、R1 / R3 / R4 / R5 / R9 / R10 / R11、`[S-utils-barrel]`、`[S-views-root]`、`[L2]`（Main.vue 改 overflow-auto）、`[L6]` |
-| 🟡 警告 | 结构 / 命名 / 强建议 | R2 / R6 / R8、`[S-utils-naming]`、`[S-module-quartet]`、`[S-system-views-split]`、`[L1]` / `[L3]` / `[L4]` / `[L5]` |
+| 🔴 严重 | 反模式 / 不可违背 | A1–A12、R1 / R3 / R4 / R5 / R9 / R10 / R11、`[S-utils-barrel]`、`[S-views-root]`、`[L2]`（Main.vue 改 overflow-auto）、`[L6]` |
+| 🟡 警告 | 结构 / 命名 / 强建议 | R2 / R8、`[S-utils-naming]`、`[S-module-quartet]`、`[S-system-views-split]`、`[L1]` / `[L3]` / `[L4]` / `[L5]` |
 | 🟢 建议 | 风格 / 取舍 | R7、R12、`[L2]`（sticky-container 疑似滥用） |
 
 `R12`（KeepAlive 策略）规范本身说"不强制"，所以本 skill 永远归类为 🟢，且只在用户**两种策略混用**时才告警。
@@ -201,7 +203,7 @@ L1–L6 多数可机械 grep，少数需 Read 判断。按下表执行（具体�
 ## 引用文件
 
 详细检测规则与报告骨架：
-- `references/grep-patterns.md` — 第一层 A1–A11 的全部 grep 规则
+- `references/grep-patterns.md` — 第一层 A1–A12 的全部 grep 规则
 - `references/semantic-checks.md` — 第二层 S-* 与第三层 R1–R12 的判断框架
 - `references/report-template.md` — 报告 markdown 骨架
 
