@@ -24,7 +24,7 @@ allowed-tools:
 
 ### 1. 规范来源单一：永远读规范 skill 本身
 
-本 skill **不复制任何规则**。每次执行先 Read `<本仓库>/skills/vue-scaffold-app/SKILL.md` 与其 `references/*.md`（`R1`–`R12`、`A1`–`A12`、`S-*`，其中 `A12` 为禁止全量引入 element-plus CSS），再 Read `<本仓库>/skills/vue-scaffold-layout/SKILL.md`（`L1`–`L6`），从中提取编号的当前定义。
+本 skill **不复制任何规则**。每次执行先 Read `<本仓库>/skills/vue-scaffold-app/SKILL.md` 与其 `references/*.md`（`R1`–`R12`、`A1`–`A12`、`S-*`，其中 `A12` 为禁止全量引入 element-plus CSS），再 Read `<本仓库>/skills/vue-scaffold-layout/SKILL.md`（`L1`–`L7`），从中提取编号的当前定义。
 
 规范文档改了，本 skill 自动跟着改，**零同步成本**。
 
@@ -40,7 +40,7 @@ allowed-tools:
 |---|---|---|
 | 第一层 | 机械 grep | A1–A12 反模式（正则一打就中） |
 | 第二层 | Glob + 文件名比对 | S-* 结构 / 命名规则 |
-| 第三层 | Read + 语义判断 | R1–R12 需要理解上下文的硬规则 |
+| 第三层 | Read + 语义判断 | R1–R13 需要理解上下文的硬规则 |
 
 不同层用不同手段，**别一把梭**。第一层 1 秒出结果，第三层最慢但价值最高（linter 干不了）。
 
@@ -67,14 +67,14 @@ allowed-tools:
 3. <本仓库>/skills/vue-scaffold-app/references/core-utils.md
 4. <本仓库>/skills/vue-scaffold-app/references/router-store.md
 5. <本仓库>/skills/vue-scaffold-app/references/layout-and-system-views.md
-6. <本仓库>/skills/vue-scaffold-layout/SKILL.md   ← 布局与高度契约规则 L1–L6 的权威来源
+6. <本仓库>/skills/vue-scaffold-layout/SKILL.md   ← 布局与高度契约规则 L1–L7 的权威来源
 ```
 
 从中提取：
-- R1–R12 的最新文字
+- R1–R13 的最新文字
 - A1–A12 的最新文字
 - S-* 的最新文字与所在锚点的具体约束
-- L1–L6 的最新文字（来自 `vue-scaffold-layout`）
+- L1–L7 的最新文字（来自 `vue-scaffold-layout`）
 
 > **本仓库路径解析**：本 skill 文件实际通过 junction / symlink 安装到 `~/.claude/skills/`，要找到原仓库可以：
 > 1. 优先看用户在对话中给过的仓库路径
@@ -115,7 +115,7 @@ allowed-tools:
 - `[S-module-quartet]` — 每个 `src/views/<m>/`，检查是否齐 `api.ts` + `constants.tsx` + `use<M>.ts` + `<M>List.vue`（缺则告警，但允许 `<m>` 是分组目录，需结合是否存在 `<X>List.vue` 判断）
 - `[S-system-views-split]` — `Glob src/system-views/`，未存在告警；登录 / 注册 / 重置密码在 `views/` 下而非 `system-views/` 也告警
 
-### Step 5 — 第三层：语义判断（R1–R12）
+### Step 5 — 第三层：语义判断（R1–R13）
 
 按 `references/semantic-checks.md` 中"语义层"一节：
 
@@ -127,18 +127,19 @@ allowed-tools:
 
 这一层执行慢，给用户进度反馈（"读 12/47 个文件..."）。
 
-### Step 5.5 — 布局合规（L1–L6，来自 `vue-scaffold-layout`）
+### Step 5.5 — 布局合规（L1–L7，来自 `vue-scaffold-layout`）
 
-L1–L6 多数可机械 grep，少数需 Read 判断。按下表执行（具体文字以 `vue-scaffold-layout/SKILL.md` 为准）：
+L1–L7 多数可机械 grep，少数需 Read 判断。按下表执行（具体文字以 `vue-scaffold-layout/SKILL.md` 为准）：
 
 | 规则 | 检测手段 | 命中即违规的信号 |
 |---|---|---|
 | `[L1]` layout-main padding | Read `src/layout/Main.vue` | `layout-main` 那行不是 `flex-1 overflow-hidden p-4 md:px-5` |
 | `[L2]` 禁止溢出 / sticky 慎用 | Grep `overflow-auto\|overflow-y-scroll`（限 `src/layout/Main.vue` 与各 `views/**/*.vue` 根节点）；Grep `StickyContainer\|sticky-container`（用量统计） | Main.vue 出现 `overflow-auto`；或 view 根节点直接挂 `overflow-auto/scroll` 凑合滚动；或 `sticky-container` 被大面积套用（逐个 Read 确认是否真有超长内容，疑似滥用则 🟢 提示） |
 | `[L3]` 不准半截 | Read `views/**/*.vue` 根节点 | 详情/表单页根节点既无 `pro-table`、又无 `bg-white`/`page-fill-card`，且无 `h-full`（灰底会透出来） |
-| `[L4]` 菜单宽度 220 | Read `src/layout/Layout.vue` | 展开态不是 `w-[220px]`（如 `w-60`/`w-56`） |
+| `[L4]` 菜单收起态 | Read `src/layout/Layout.vue` | 无展开/收起两态，或收起态不是 `w-16`（只剩图标）；展开宽度不限具体值，不命中 |
 | `[L5]` 操作列用 width | Grep `label: ['\"]操作` 定位 `constants.tsx`，Read 该列 | 操作列（`fixed: 'right'`）用了 `minWidth` 而非 `width` |
 | `[L6]` view 根节点挂 view-w | Glob `src/views/**/*.vue`（独立路由页），Read 根节点首个 `<div>` | 根节点缺 `view-w`，或用自定义 class 替代 |
+| `[L7]` 菜单由路由派生 | Read `src/layout/TheMenu.vue` 与 `useLayout.ts` | TheMenu 写死菜单数组（对象字面量 title/path）/ 不渲染 `TheMenuItem`；或 `useLayout` 直接返回原始 `menuRoutes` 未走 `buildMenuTree` |
 
 `[L6]` 注意排除：非路由页的纯子组件（dialog / 局部片段）不要求挂 `view-w`——只查挂到 router 的 list/detail/表单主页面。
 
@@ -175,7 +176,7 @@ L1–L6 多数可机械 grep，少数需 Read 判断。按下表执行（具体�
 | 级别 | 含义 | 包含规则 |
 |---|---|---|
 | 🔴 严重 | 反模式 / 不可违背 | A1–A12、R1 / R3 / R4 / R5 / R9 / R10 / R11、`[S-utils-barrel]`、`[S-views-root]`、`[L2]`（Main.vue 改 overflow-auto）、`[L6]` |
-| 🟡 警告 | 结构 / 命名 / 强建议 | R2 / R8、`[S-utils-naming]`、`[S-module-quartet]`、`[S-system-views-split]`、`[L1]` / `[L3]` / `[L4]` / `[L5]` |
+| 🟡 警告 | 结构 / 命名 / 强建议 | R2 / R8 / R13、`[S-utils-naming]`、`[S-module-quartet]`、`[S-system-views-split]`、`[L1]` / `[L3]` / `[L4]` / `[L5]` / `[L7]` |
 | 🟢 建议 | 风格 / 取舍 | R7、R12、`[L2]`（sticky-container 疑似滥用） |
 
 `R12`（KeepAlive 策略）规范本身说"不强制"，所以本 skill 永远归类为 🟢，且只在用户**两种策略混用**时才告警。
@@ -204,7 +205,7 @@ L1–L6 多数可机械 grep，少数需 Read 判断。按下表执行（具体�
 
 详细检测规则与报告骨架：
 - `references/grep-patterns.md` — 第一层 A1–A12 的全部 grep 规则
-- `references/semantic-checks.md` — 第二层 S-* 与第三层 R1–R12 的判断框架
+- `references/semantic-checks.md` — 第二层 S-* 与第三层 R1–R13 的判断框架
 - `references/report-template.md` — 报告 markdown 骨架
 
 执行时按需打开对应 reference。

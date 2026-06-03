@@ -88,6 +88,12 @@ grep 已覆盖的反模式见 `grep-patterns.md`，本文件不重复。R6（组
 - `src/utils/crypto.ts` 不存在但工程用了 `JSEncrypt` / `node-forge` → 违规；存在但无 `encryptPayload` 等入口 → 告警
 - 🔴 严重
 
+### [R13] App.vue 注入中文 locale
+
+- Read `src/App.vue`：须 `<el-config-provider :locale="zhCn">` 包裹 `<router-view>` + `import zhCn from 'element-plus/es/locale/lang/zh-cn'`
+- 缺失且 `main.ts` 也无 `app.use(ElementPlus, { locale })` → 违规
+- 🟡 警告
+
 ---
 
 ## 归并

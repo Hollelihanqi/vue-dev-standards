@@ -366,13 +366,17 @@ app.mount("#app");
 
 ```vue
 <template>
-  <router-view />
+  <el-config-provider :locale="zhCn">
+    <router-view />
+  </el-config-provider>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+</script>
 ```
 
-保持最简，所有布局由路由决定（`Layout.vue` 或 `system-views/*`）。
+保持最简，布局由路由决定。`el-config-provider` 是 App.vue 唯一允许的额外职责：本规范按需自动引入 element-plus（无 `app.use(ElementPlus, { locale })`），漏了这层中文 locale，内置组件文案（分页 / `el-date-picker` / 空数据等）全是英文。中文工程必须带。
 
 ---
 

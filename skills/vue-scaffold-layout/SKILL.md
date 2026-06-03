@@ -44,7 +44,7 @@ allowed-tools:
 ## 六条强制规则（均带真实参数）
 
 > **规则编号（供 `vue-scaffold-review` 引用）**：
-> `L1` layout-main padding · `L2` 撑满不溢出 / sticky-container 慎用 · `L3` 不准半截（白底 + 按需圆角）· `L4` 菜单宽度 220 · `L5` 操作列用 width · `L6` view 根节点挂 view-w。
+> `L1` layout-main padding · `L2` 撑满不溢出 / sticky-container 慎用 · `L3` 不准半截（白底 + 按需圆角）· `L4` 菜单宽度（展开自定 / 收起 w-16）· `L5` 操作列用 width · `L6` view 根节点挂 view-w · `L7` 菜单由路由派生（与面包屑同源）。
 
 ### 规则 L1 · layout-main 的 padding 是 `p-4 md:px-5`
 
@@ -124,15 +124,15 @@ allowed-tools:
 > <XxxCreateDialog v-model="createDialogVisible" />
 > ```
 
-### 规则 L4 · 左侧菜单宽度 220
+### 规则 L4 · 左侧菜单宽度（展开自定，收起 w-16）
 
 ```
 <aside class="layout-sider flex-shrink-0 h-full overflow-hidden"
        :class="sidebarCollapsed ? 'w-16' : 'w-[220px]'">
 ```
 
-- 展开：`w-[220px]`
-- 收起：`w-16`（64px，只剩图标）
+- 展开宽度**由项目自定**，推荐 `w-[220px]`（220–260 之间都合理），不强制具体像素值。
+- 收起：`w-16`（64px，只剩图标）——只要求保留折叠两态且收起后只剩图标。
 
 ### 规则 L5 · 表格操作列用 `width`，不要用 `minWidth`
 
@@ -171,6 +171,23 @@ allowed-tools:
 - 其余原子类（`h-full` / `w-full` / `flex flex-col` / `bg-white rounded-2 p-6` 等）按页面类型（规则 3）追加。
 - 反模式：用自定义 class（如 `class="project-page"`）替代 `view-w`。
 
+### 规则 L7 · 左侧菜单由路由派生，禁止硬编码
+
+菜单经 `buildMenuTree(menuRoutes)` 派生，`TheMenu` 递归渲染 `TheMenuItem`；不写死菜单数组、不在 `useLayout` 直接返回原始路由。单子路由模块自动提升为一级，需保留父级分组时给父路由加 `meta.alwaysShow: true`。这样菜单与面包屑（`createBreadcrumbs(route.matched)`，两级）同源一致。
+
+```ts
+// useLayout.ts
+const layoutMenuRoutes = computed(() => buildMenuTree(menuRoutes))
+return { menuRoutes: layoutMenuRoutes /* ... */ }
+```
+
+```vue
+<!-- TheMenu.vue -->
+<el-menu :default-active="activeMenu" :default-openeds="openedPaths" router>
+  <TheMenuItem v-for="item in routes" :key="item.path" :menu="item" />
+</el-menu>
+```
+
 ## 自检清单
 
 起新页面 / review 时逐条过：
@@ -180,5 +197,5 @@ allowed-tools:
 - [ ] 详情页 / 表单页：根节点带 `bg-white rounded-2 p-6`，铺满无"半截"；列表页只挂 `view-w h-full`，圆角由 pro-table 自带
 - [ ] 页面内无 `overflow-auto`/`overflow-y-scroll` 凑合滚动；内容超长需滚动时用 `sticky-container`
 - [ ] 没有改动外壳 `layout-main` 的 `overflow-hidden` / `p-4 md:px-5`
-- [ ] 菜单展开 `w-[220px]`、收起 `w-16`
+- [ ] 菜单有展开/收起两态，收起 `w-16` 只剩图标（展开宽度自定，不限具体值）
 - [ ] 表格操作列用 `width` 不用 `minWidth`，`fixed: 'right'`

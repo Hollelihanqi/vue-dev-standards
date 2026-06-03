@@ -73,26 +73,28 @@ const {
     >
       <router-view v-slot="{ Component, route }">
         <keep-alive v-if="route.meta?.keepAlive">
-          <component
-            :is="Component"
-            :key="String(routeReloadTokens[route.path] || 0)"
-          />
+          <component :is="Component" :key="getRouteCacheKey(route)" />
         </keep-alive>
-        <component
-          v-else
-          :is="Component"
-          :key="String(routeReloadTokens[route.path] || 0)"
-        />
+        <component v-else :is="Component" :key="getRouteRenderKey(route)" />
       </router-view>
     </div>
   </main>
 </template>
 
 <script setup lang="ts">
+import type { RouteLocationNormalizedLoaded } from "vue-router";
+
 import { useAppStore } from "@/store/app";
 
 const appStore = useAppStore();
-const routeReloadTokens = computed(() => appStore.routeReloadTokens);
+
+// key 必须带路由身份，否则不同路由共用同一 key（如恒为 "0"）会让 keep-alive
+// 把 A 页缓存当 B 页激活，报 `deactivate is not a function`。
+const getRouteCacheKey = (route: RouteLocationNormalizedLoaded) =>
+  `${String(route.name || route.path)}:${appStore.routeReloadTokens[route.path] || 0}`;
+
+const getRouteRenderKey = (route: RouteLocationNormalizedLoaded) =>
+  `${route.fullPath}:${appStore.routeReloadTokens[route.path] || 0}`;
 </script>
 ```
 
@@ -106,10 +108,7 @@ const routeReloadTokens = computed(() => appStore.routeReloadTokens);
     >
       <router-view v-slot="{ Component, route }">
         <keep-alive :include="keepAliveNames">
-          <component
-            :is="Component"
-            :key="String(routeReloadTokens[route.path] || 0)"
-          />
+          <component :is="Component" :key="getRouteCacheKey(route)" />
         </keep-alive>
       </router-view>
     </div>
@@ -117,10 +116,16 @@ const routeReloadTokens = computed(() => appStore.routeReloadTokens);
 </template>
 
 <script setup lang="ts">
+import type { RouteLocationNormalizedLoaded } from "vue-router";
+
 import { useAppStore } from "@/store/app";
 
 const appStore = useAppStore();
-const routeReloadTokens = computed(() => appStore.routeReloadTokens);
+
+// key 必须带路由身份，否则不同路由共用同一 key（如恒为 "0"）会让 keep-alive
+// 把 A 页缓存当 B 页激活，报 `deactivate is not a function`。
+const getRouteCacheKey = (route: RouteLocationNormalizedLoaded) =>
+  `${String(route.name || route.path)}:${appStore.routeReloadTokens[route.path] || 0}`;
 
 // 列表页通过 meta.keepAlive 启用缓存；详情页不缓存。
 const router = useRouter();

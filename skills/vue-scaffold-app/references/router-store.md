@@ -108,6 +108,10 @@ export const useAppStore = defineStore(
 );
 ```
 
+> **`routeReloadTokens` / `bumpRouteReloadToken` 是 keep-alive 的强制重载开关，不是面包屑逻辑。**
+> `Main.vue` 把 token 拼进 keep-alive 的 key（`name:token`）；token 不变时页面走缓存、保留状态，token +1 则 key 变化、缓存失效、页面重新挂载并拉数据。
+> 典型用法：详情页改完数据返回列表前调 `bumpRouteReloadToken('/xxx/list')`，让被缓存的列表页自动刷新最新数据。没有这类需求时它就是预留能力，留着无副作用。
+
 ---
 
 ## src/store/auth.ts
@@ -319,8 +323,20 @@ const router = createRouter({
 // 根据当前匹配路由和显式 breadcrumbTrail 生成面包屑。
 // 隐藏菜单的详情页通过 breadcrumbTrail 指回对应列表页，避免面包屑断层。
 const createBreadcrumbs = (route: RouteLocationNormalizedLoaded) => {
-  const matchedItems = route.matched
-    .filter((item) => item.meta.title)
+  // 与 buildMenuTree 同步：单可见子路由（无 alwaysShow）的父模块在菜单里被提升为一级，
+  // 面包屑同样丢掉该父模块层，保证菜单层级 == 面包屑层级。
+  const isPromotedParent = (record: (typeof route.matched)[number]) => {
+    const visibleChildren = (record.children || []).filter(
+      (child) => child.meta?.title && !child.meta.hideMenu,
+    );
+    return visibleChildren.length === 1 && !record.meta?.alwaysShow;
+  };
+
+  const matched = route.matched.filter((item) => item.meta.title);
+  const matchedItems = matched
+    .filter(
+      (item, index) => !(index < matched.length - 1 && isPromotedParent(item)),
+    )
     .map((item) => ({
       title: item.meta.title as string,
       path: item.path,
