@@ -1,8 +1,24 @@
+.text-ellipsis__wrapper {
+  display: inline-flex;
+  align-items: flex-start;
+  max-width: 100%;
+  gap: 4px;
+  vertical-align: bottom;
+}
+
 .text-ellipsis {
+  flex: 1;
   line-height: 1.6;
+  min-width: 0;
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
+
+.text-ellipsis__copy {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
 .text-ellipsis__action {
   cursor: pointer;
   color: var(--el-color-primary);

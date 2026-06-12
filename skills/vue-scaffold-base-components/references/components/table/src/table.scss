@@ -60,6 +60,9 @@
     }
   }
   .my-el-table {
+    border-radius: 8px;
+    overflow: hidden;
+
     .el-scrollbar__view {
       height: 100%;
     }

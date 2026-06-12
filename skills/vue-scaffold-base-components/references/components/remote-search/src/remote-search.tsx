@@ -2,9 +2,21 @@ import { defineComponent, h, ref, getCurrentInstance, onMounted, nextTick, onBef
 import type { RemoteSearchProps } from './iremote-search'
 import { remoteSearchProps, remoteSearchEmits } from './iremote-search'
 import { ElSelect, ElOption, ElSelectV2 } from 'element-plus'
-import { useDebounceFn } from '@vueuse/core'
 
 import { request } from '@/utils/request'
+
+// 本地实现的防抖（等价于 @vueuse/core 的 useDebounceFn）：
+// 每次调用都重置计时器，停止触发后经过 ms 毫秒才真正执行 fn，避免远程搜索连发请求。
+function useDebounceFn<T extends (...args: any[]) => any>(fn: T, ms = 300) {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return (...args: Parameters<T>) => {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = null
+      fn(...args)
+    }, ms)
+  }
+}
 
 export default defineComponent({
   name: 'RemoteSearch',

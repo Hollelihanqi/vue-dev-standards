@@ -5,7 +5,7 @@ export interface ColumnsItemProps {
   label?: string
   prop?: string
   hide?: (row?: any) => boolean
-  copy?: (row?: any) => boolean
+  copy?: boolean | ((row?: any) => boolean)
   copyText?: string | Function
   [propsName: string]: any
 }

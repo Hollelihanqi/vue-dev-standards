@@ -8,6 +8,10 @@ export const textEllipsisProps = {
   expandText: makeStringProp(''),
   collapseText: makeStringProp(''),
   position: makeStringProp('end'),
+  copyable: {
+    type: Boolean,
+    default: false,
+  },
 }
 
 export const textEllipsisEmits = ['clickAction']

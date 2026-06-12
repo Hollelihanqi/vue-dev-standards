@@ -94,7 +94,9 @@ const useTable = (props: any) => {
   }
 
   onMounted(() => {
-    getTableList()
+    if (props.requestAuto) {
+      getTableList()
+    }
   })
 
   return {

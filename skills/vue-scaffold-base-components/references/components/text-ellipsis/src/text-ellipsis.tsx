@@ -1,4 +1,5 @@
 import { ref, watch, computed, onMounted, defineComponent } from 'vue'
+import { ElMessage, ElText } from 'element-plus'
 
 import { textEllipsisProps, textEllipsisEmits } from './itext-ellipsis'
 import { windowWidth, useExpose } from './utils'
@@ -15,6 +16,7 @@ export default defineComponent({
     const root = ref<HTMLElement>()
 
     const actionText = computed(() => (expanded.value ? props.collapseText : props.expandText))
+    const copyText = computed(() => (props.content ? String(props.content) : ''))
 
     const pxToNum = (value: string | null) => {
       if (!value) return 0
@@ -152,6 +154,17 @@ export default defineComponent({
       )
     }
 
+    const handleCopy = async (event: MouseEvent) => {
+      event.stopPropagation()
+      if (!copyText.value) return
+      try {
+        await navigator.clipboard.writeText(copyText.value)
+        ElMessage.success('已复制')
+      } catch {
+        ElMessage.warning('复制失败，请手动选择复制')
+      }
+    }
+
     onMounted(calcEllipsised)
 
     watch([windowWidth, () => [props.content, props.rows, props.position]], calcEllipsised)
@@ -159,10 +172,17 @@ export default defineComponent({
     useExpose({ toggle })
 
     return () => (
-      <div ref={root} class="yto-text-ellipsis text-ellipsis">
-        {expanded.value ? props.content : text.value}
-        {hasAction.value ? renderAction() : null}
-      </div>
+      <span class="text-ellipsis__wrapper">
+        <div ref={root} class="yto-text-ellipsis text-ellipsis">
+          {expanded.value ? props.content : text.value}
+          {hasAction.value ? renderAction() : null}
+        </div>
+        {props.copyable && copyText.value ? (
+          <ElText class="text-ellipsis__copy" type="primary" onClick={handleCopy}>
+            复制
+          </ElText>
+        ) : null}
+      </span>
     )
   },
 })
