@@ -3,7 +3,7 @@
 替换占位符：
 
 - `<project-name>` → 实际包名（kebab-case，如 `my-admin`）
-- `<api-target>` → 后端基址（例如 `http://<backend-host>:<port>/`），多套环境用不同 `.env.*` 文件
+- `<api-target>` → 后端基址（例如 `http://<backend-host>:<port>/`），**直接写在 `vite.config.ts` 的 proxy.target 字面量里，不放 `.env`**（dev 代理是构建期配置，不是运行时变量）；多环境按 `mode` 在 `vite.config.ts` 内分支切换
 - `<primary-color>` → 主色（默认 `#0054a7`）
 - `<service-a>` / `<service-b>` → 实际后端服务路径前缀（按对接的 API gateway 路径来）
 
@@ -135,7 +135,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // 按业务后端服务前缀，多套就加多个。下面两条仅是示例：
+      // 按业务后端服务前缀，多套就加多个。target 直接写后端地址字面量，不读 .env。下面两条仅是示例：
       "/api/<service-a>": {
         target: "<api-target>",
         changeOrigin: true,
@@ -155,7 +155,8 @@ export default defineConfig({
 
 - `dirs: []` 关闭默认目录扫描，由 `AppComponentsResolver` 接管
 - 代理路径前缀必须以 `/api/<service>` 开头（与 `.env.VITE_API_BASE_URL=/api` 对齐）
-- 多环境后端通过 `.env.development` / `.env.production` 切换
+- **代理 target 直接写在本文件里，禁止用 `VITE_PROXY_TARGET` 之类的 `.env` 变量 + `loadEnv` 注入**：dev 代理只在本地开发服务器生效、运行时读不到，放 `.env` 既无意义又会把内网后端地址打进前端产物
+- 多环境后端在 `vite.config.ts` 内按 `mode` 分支切换 target，不依赖 `.env.development` / `.env.production`
 
 ---
 

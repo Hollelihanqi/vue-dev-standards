@@ -12,12 +12,7 @@
 ```vue
 <template>
   <div class="layout-root flex h-screen w-screen overflow-hidden">
-    <aside
-      class="layout-sider flex-shrink-0 h-full overflow-hidden bg-[#001f35] transition-all"
-      :class="sidebarCollapsed ? 'w-16' : 'w-[220px]'"
-    >
-      <TheMenu :routes="menuRoutes" :collapsed="sidebarCollapsed" />
-    </aside>
+    <TheSidebar :routes="menuRoutes" :collapsed="sidebarCollapsed" />
 
     <section class="layout-body flex-1 flex flex-col min-w-0">
       <TheHeader
@@ -40,7 +35,7 @@
 import Main from "./Main.vue";
 import TheBreadcrumb from "./TheBreadcrumb.vue";
 import TheHeader from "./TheHeader.vue";
-import TheMenu from "./TheMenu.vue";
+import TheSidebar from "./TheSidebar.vue";
 import { useLayout } from "./useLayout";
 
 const {
@@ -53,6 +48,31 @@ const {
   handleUserCommand,
   handleBreadcrumbClick,
 } = useLayout();
+</script>
+```
+
+## src/layout/TheSidebar.vue
+
+侧栏外壳 + 品牌区 + `TheMenu` + 平台页脚,连同侧栏 scoped 样式全收在此(L8)。`Layout` 不持有这些内部 DOM。
+
+```vue
+<template>
+  <aside
+    class="layout-sider flex-shrink-0 h-full overflow-hidden bg-[#001f35] transition-all"
+    :class="collapsed ? 'w-16' : 'w-[220px]'"
+  >
+    <div class="layout-brand h-16 flex-center"><!-- 品牌 logo / 标题 --></div>
+    <TheMenu :routes="routes" :collapsed="collapsed" @menu-select="(p) => emit('menu-select', p)" />
+    <div class="layout-platform h-12"><!-- 平台页脚 --></div>
+  </aside>
+</template>
+
+<script setup lang="ts">
+import TheMenu from "./TheMenu.vue";
+import type { LayoutMenuRoute } from "./useLayout";
+
+defineProps<{ routes: LayoutMenuRoute[]; collapsed: boolean }>();
+const emit = defineEmits<{ "menu-select": [path: string] }>();
 </script>
 ```
 

@@ -44,7 +44,7 @@ allowed-tools:
 - `references/config-files.md` —— `package.json` / `vite.config.ts` / `uno.config.ts` / `tsconfig*.json` / `.env` / `.gitattributes` / `index.html`
 - `references/core-utils.md` —— `utils/request.ts`（业务码统一处理）/ `utils/crypto.ts`（RSA 分段加密）/ `utils/format.ts`（空值占位 / 日期格式化等显示型辅助）/ `utils/regx.ts`（正则常量 + 基于正则的 element-plus 表单校验 rules 收口）
 - `references/router-store.md` —— `router/index.ts`（守卫 + 面包屑 + document.title）/ `store/index.ts` + `store/app.ts` + `store/auth.ts`
-- `references/layout-and-system-views.md` —— `Layout.vue` / `TheHeader.vue` / `TheMenu.vue` / `TheBreadcrumb.vue` / `useLayout.ts` 与 `system-views/login` `register` `reset-password` 全套
+- `references/layout-and-system-views.md` —— `Layout.vue`（只装配区域）/ `TheSidebar.vue`（侧栏外壳+品牌+菜单+页脚）/ `TheHeader.vue` / `TheMenu.vue`（纯菜单）/ `TheBreadcrumb.vue` / `useLayout.ts` 与 `system-views/login` `register` `reset-password` 全套
 
 业务模块与业务组件不放 references —— 用 **子 skill** 接管，因为它们是反复执行的高频动作，且每次执行都需要独立的"读现有惯例 → 生成新文件"决策流。
 
@@ -95,11 +95,14 @@ allowed-tools:
     ├── directives/           # 自定义指令
     ├── hooks/                # 跨模块共享的 composable（如 usePermission / useDict）
     │                         # 单模块专属的 composable 仍放在 views/<module>/use<Module>.ts，不进这里
+    ├── i18n.ts               # （可选）启用 vue-i18n 时的入口；纯中文项目没有这个文件
+    ├── locales/              # （可选）启用 vue-i18n 时的语言包目录
     ├── layout/
-    │   ├── Layout.vue        # 主框架（Header + Menu + Main + Breadcrumb）
+    │   ├── Layout.vue        # 主框架，只装配区域：Sidebar + Header + Breadcrumb + Main（见 vue-scaffold-layout L8）
     │   ├── Main.vue
+    │   ├── TheSidebar.vue    # 侧栏：aside 外壳 + 品牌区 + TheMenu + 平台页脚（含侧栏 scoped 样式）
     │   ├── TheHeader.vue
-    │   ├── TheMenu.vue
+    │   ├── TheMenu.vue       # 只负责菜单本体（el-menu + TheMenuItem），不含品牌 / 页脚
     │   ├── TheMenuItem.vue
     │   ├── TheBreadcrumb.vue
     │   └── useLayout.ts      # Layout 所有交互逻辑
@@ -128,7 +131,7 @@ allowed-tools:
     │       ├── use<Module>.ts  # 业务 composable
     │       ├── <Module>List.vue
     │       ├── <Module>Detail.vue
-    │       └── <Module>CreateDialog.vue
+    │       └── <Module>Create.vue   # 创建弹窗：文件名不带 Dialog / Drawer 形态后缀
     ├── App.vue
     ├── main.ts
     └── vite-env.d.ts
@@ -136,7 +139,7 @@ allowed-tools:
 
 **[S-system-views-split] 两个 system-views/views 分层是核心**：登录注册这类全屏页面**不进 Layout**，与业务页面用不同的视觉容器；这块千万别合并。
 
-## 十三条不可违背的约定（R1–R13）
+## 十四条不可违背的约定（R1–R14）
 
 > 这些编号是稳定 ID，被 `vue-scaffold-review` 报告引用。修改本节请保持编号不变。
 
@@ -153,8 +156,9 @@ allowed-tools:
 11. **[R11] store 模块禁止手动调 `localStorage`**：所有跨会话持久化通过 `defineStore` 第三参数的 `persist: { pick: [...] }` 配置（`pinia-plugin-persistedstate` 全局注册）。**不允许**出现 `localStorage.setItem(...)` / `localStorage.getItem(...)` / `localStorage.removeItem(...)` / `localStorage.clear()` 这类调用。退出登录用"in-memory state 重置"（`token.value = ''` 等），persistedstate 会自动把空值同步回 localStorage——不要用 `localStorage.clear()`，它会把跟登录态无关的偏好（语言 / 侧边栏 / 系统配置）一起误伤。
 12. **[R12] KeepAlive 策略不强制**：`Main.vue` 里 `<keep-alive>` 是用 `:include="keepAliveNames"` 白名单还是 `v-if="route.meta.keepAlive"` 条件分支，**由项目自己决定**，脚手架不作硬性要求。两种写法的取舍各有道理（白名单集中、分支显式），选择哪一种是项目内部的工程权衡，不属于"规范"层面。
 13. **[R13] 禁止桶式 re-export**：可以建 `index.ts`，但必须是真正的实现文件（如 `router/index.ts`、`store/index.ts`），不能是只做 `export * from './xxx'` 的纯转发桶。业务文件直接从子模块 import（`'@/utils/request'`、`'@/hooks/usePermission'`），不要通过中间层转一道。桶式转发容易把无关依赖拖进循环引用，也妨碍 IDE 跳转和 tree-shaking。
+14. **[R14] Element Plus 中文 locale**：`App.vue` 用 `<el-config-provider :locale="zhCn">` 包裹根视图（`import zhCn from 'element-plus/es/locale/lang/zh-cn'`）。本规范按需自动引入 element-plus（没有 `app.use(ElementPlus, { locale })` 这一层），漏了它，分页 / 日期面板 / 空数据等内置文案全是英文。中文工程必须带。
 
-## 反模式（A1–A13，明确禁止）
+## 反模式（A1–A14，明确禁止）
 
 > 这些编号是稳定 ID，被 `vue-scaffold-review` 报告引用。修改本节请保持编号不变。
 
@@ -171,10 +175,35 @@ allowed-tools:
 - ❌ **[A11] store 里手动调 `localStorage.setItem(KEY, value)` / `localStorage.getItem(KEY)` / `localStorage.clear()`** —— 一律用 `defineStore(..., { persist: { pick: [...] } })` 走插件；退出清登录态用 in-memory state 重置，让 persistedstate 自动同步，不要 `localStorage.clear()` 误伤偏好
 - ❌ **[A12]** `import 'element-plus/dist/index.css'` / `import 'element-plus/theme-chalk/**.css'` —— 全量引入 element-plus CSS。规范用 `unplugin-vue-components` 的 `ElementPlusResolver` 按需自动 import 组件，CSS 由 `@rdeam/vite-plugin-element-plus-theme-builder` 编译成 `src/assets/generated/element-plus-theme.css`，在 `main.ts` 单次 import 即可。**业务文件任何位置都不应该 import element-plus 的 CSS**
 - ❌ **[A13]** 建纯转发桶文件 `index.ts`（里面只有 `export * from './xxx'`） —— 有实现逻辑的 `index.ts` 可以，纯转发的不要
+- ❌ **[A14]** 业务页裸用 `<el-table>` —— 列表页（有查询表单）用 `pro-table`，无查询表单的表格用 `HTable`（`<Table>`）；缺特性去扩展 `HTable`，不在业务页裸用。选型边界见 `vue-scaffold-layout` L2 的「pro-table vs HTable」
 
 ## 执行流程（从 `pnpm create vite` 到可运行的 hello world 业务页）
 
 > 每一步用对应的 reference 文件作为复制源，**不要凭记忆抄代码**。
+
+### Step 0 — 同步项目级 CLAUDE.md（每次必做，最先做）
+
+把 `references/project-CLAUDE.template.md` 写入目标项目根目录的 `CLAUDE.md`，作为**常驻开发规范**（每次会话自动加载、优先级高于 skill 正文）：
+
+- 项目根**没有** `CLAUDE.md` → 直接复制模板过去。
+- 已有 `CLAUDE.md` 且首行是 `<!-- vue-dev-standards:project-claude vN -->` → 是本套生成的，模板版本更高时**整体覆盖**（用户的本地改动应回流到模板，而不是留在项目里）。
+- 已有 `CLAUDE.md` 但**不是**本套标记（用户自己写的）→ **不要覆盖**，把本套要点合并进去或提示用户，避免误伤。
+
+这一步与"建工程"解耦：哪怕是已有老项目，只要触发本 skill 也应顺手把 `CLAUDE.md` 补齐/更新。
+
+**同时写一个 `AGENTS.md` 指针**（给 Codex 等只认 `AGENTS.md` 的工具）：项目根没有 `AGENTS.md`（或首行是 `<!-- vue-dev-standards:agents-pointer -->`）时，写入下面这份**只指向 CLAUDE.md、不重复内容**的指针，保证规范单一来源：
+
+```markdown
+<!-- vue-dev-standards:agents-pointer v1 -->
+
+# 开发规范
+
+本项目的开发规范见 [`./CLAUDE.md`](./CLAUDE.md)，请完整遵守其中全部约定（数据请求、表格、页面布局、业务模块、状态与样式等）。
+
+CLAUDE.md 是规范的唯一来源；本文件仅为 Codex 等读取 `AGENTS.md` 的工具提供入口。
+```
+
+已有用户自己写的 `AGENTS.md`（非本套标记）→ 不覆盖，提示用户在其中追加一行指向 `CLAUDE.md` 即可。
 
 ### Step 1 — 用官方脚手架起壳子
 
@@ -277,7 +306,7 @@ src/views/example/
 ├── constants.tsx           # createXxxSearchForm() / createXxxColumns()
 ├── useExample.ts           # 业务逻辑（formModel ref / list 加载 / 提交 / 弹窗）
 ├── ExampleList.vue         # <pro-table> + <search-form> + 调用 useExample()
-├── ExampleCreateDialog.vue # 弹窗（如有）
+├── ExampleCreate.vue       # 弹窗（如有）—— 文件名不带 Dialog / Drawer 后缀
 └── ExampleDetail.vue       # 详情页（如有）
 ```
 
@@ -304,8 +333,8 @@ pnpm dev
 1. `src/views/role/api.ts` —— 写 `getRoleList` / `createRole` / `updateRole` / `deleteRole`，全部 `request.post<T>(...)`
 2. `src/views/role/constants.tsx` —— 写 `createRoleSearchForm()` 和 `createRoleColumns({ onEdit, onDelete })`
 3. `src/views/role/useRole.ts` —— `useTemplateRef('tableRef')`、`searchFormList = computed(...)`、`columns = computed(...)`、`requestTableData` / `handleEdit` / `handleDelete` 等方法
-4. `src/views/role/RoleList.vue` —— 30 行内：`<pro-table />` + `<RoleEditDialog />` + 解构 `useRole()`
-5. 如有创建 / 编辑，新建 `RoleEditDialog.vue`（独立 props `modelValue`，emit `update:modelValue` + `success`）
+4. `src/views/role/RoleList.vue` —— 30 行内：`<pro-table />` + `<RoleEdit />` + 解构 `useRole()`
+5. 如有创建 / 编辑，新建 `RoleEdit.vue`（弹框 / 抽屉文件名**不带** `Dialog` / `Drawer` 后缀；独立 props `modelValue`，emit `update:modelValue` + `success`）
 6. `src/router/index.ts` 加路由：
    ```ts
    {

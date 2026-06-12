@@ -1,4 +1,4 @@
-# grep-patterns — 第一层检测（A1–A12 反模式）
+# grep-patterns — 第一层检测（A1–A14 反模式）
 
 每条反模式一条 ripgrep 正则。所有规则的 Grep 调用并行发出，一次拿全部命中。
 
@@ -18,6 +18,7 @@
 - 正则：`\.code\s*[!=]==?\s*0\b`
 - 范围：`src/**/*.{ts,vue,tsx}`
 - 额外排除：`src/utils/request.ts`（拦截器本身要判 code）
+- 注意：若 `.env` 里 `VITE_API_SUCCESS_CODE` 覆盖了成功码（R1 允许），把正则末尾的 `0` 换成实际成功码再跑
 
 ## [A3] RSA 公钥散落
 
@@ -28,8 +29,10 @@
 
 ## [A6] 业务下拉手写 el-select
 
-- 正则（multiline）：`<el-select[^>]*\bremote\b[\s\S]{0,500}?:remote-method`
+- 正则 1（remote 下拉，multiline）：`<el-select[^>]*\bremote\b[\s\S]{0,500}?:remote-method`
+- 正则 2（手写 options 渲染）：`<el-option[^>]+v-for`
 - 范围：`src/views/**/*.vue`
+- 正则 2 命中后 Read 确认：选项数据来自接口 / 字典加载（伴随 `loadXxx` / `xxxOptions` ref）才算违规；本地静态枚举（2–3 个写死的选项）降为 🟢 提示
 
 ## [A7] meta.title 用 i18n key
 
@@ -67,6 +70,21 @@
 - 正则：`import\s+['"]element-plus/(dist|theme-chalk|lib)/`
 - 范围：`src/**/*.{ts,vue,tsx}`
 - 修复：删除该 import，ep 组件由 `ElementPlusResolver` 按需引入
+
+## [A13] 纯转发桶 index.ts
+
+- 正则：`export\s+\*\s+from`
+- 范围：`src/**/index.ts`
+- 命中后 Read 确认：整个文件**只有** re-export 语句（无任何实现逻辑）才算违规；含实现逻辑的 `index.ts`（如 `router/index.ts`）不算
+- 配套：`[S-utils-barrel]` 专查 `src/utils/index.ts`（存在即违规，无需 Read）
+- 🟡 警告
+
+## [A14] 业务页裸用原生 el-table
+
+- 正则：`<el-table[\s/>]`
+- 范围：`src/views/**/*.vue`（`components/` / `custom-components/` 默认排除，封装实现内部的 el-table 不误伤）
+- 修复：列表页（有查询表单）用 `pro-table`，无查询表单的表格用 `HTable`（`<Table>`）；缺特性去扩展 HTable，别在业务页裸用。选型边界见 `vue-scaffold-layout` L2 的「pro-table vs HTable」
+- 🟡 警告
 
 ---
 

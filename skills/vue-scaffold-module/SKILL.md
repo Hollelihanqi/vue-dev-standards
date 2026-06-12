@@ -39,7 +39,7 @@ allowed-tools:
 | 层                                                                                                         | 持有的状态                                                   | 持有的逻辑                                                                  |
 | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------- |
 | **主业务 composable**<br>`use<Menu>`（一个菜单一个）                                                       | 列表数据 / 分页 / 查询 / 子操作的 visibility / 当前编辑行 id | 调 API + 刷列表 + 业务编排（决定调 create 还是 update、成功后是否 refresh） |
-| **子业务组件**<br>`<EntityName>EditDialog.vue` / `<EntityName>Drawer.vue` 等<br>**🚫 没有伴生 composable** | 表单 formModel / submitting / formRef / rules / validators   | 表单校验 / UI 状态自管 / 通过 `props.onSubmit` 把 payload 抛给父端          |
+| **子业务组件**<br>`<EntityName>Edit.vue` / `<EntityName>Detail.vue` 等<br>(弹框 / 抽屉文件名不带 `Dialog` / `Drawer` 后缀)<br>**🚫 没有伴生 composable** | 表单 formModel / submitting / formRef / rules / validators   | 表单校验 / UI 状态自管 / 通过 `props.onSubmit` 把 payload 抛给父端          |
 
 **主业务 composable 不知道**：
 
@@ -97,7 +97,7 @@ const handleEditSubmit = async (payload: PayloadType) => {
 
 ```vue
 <!-- 父端模板 -->
-<XxxDialog
+<XxxEdit
   v-model="editVisible"
   :id="currentId"
   :on-submit="handleEditSubmit"
@@ -128,6 +128,8 @@ const handleEditSubmit = async (payload: PayloadType) => {
 
 如果上述任一不满足，提示用户先按 `vue-scaffold-app` 主 skill 完成基础设施搭建。
 
+> **顺手同步 CLAUDE.md**：进入本 skill 时若项目根没有 `CLAUDE.md`（或不是 `<!-- vue-dev-standards:project-claude -->` 标记的版本），按 `vue-scaffold-app` 的 Step 0 规则从 `vue-scaffold-app/references/project-CLAUDE.template.md` 补齐常驻规范，再继续生成模块。
+
 > **分页参数 / 返回结构按各项目后端约定来**——脚手架不预置 `createPagePayload` / `pickPageResult`。本 skill 生成 `api.ts` 时如果项目里已经有同类封装就复用；没有就在该模块的 `api.ts` 里直接组装 payload、直接 pick `{ items, total }`，等项目里出现 2–3 个稳定用法再考虑下沉到 `utils/` 下按职责命名的文件（如 `utils/pagination.ts`）——**不要用泛名 `common.ts` / `helpers.ts`**（见 vue-scaffold-app `[S-utils-naming]`）。
 
 ## 输入参数
@@ -153,12 +155,27 @@ src/views/<menu-name>/
 ├── use<Menu>.ts                      # 🎯 主 composable —— 一个菜单一个，覆盖列表页全部顶层交互（必有）
 ├── use<Menu>Detail.ts                # ⚠️ 仅当详情页内部有"操作流 / 审批流 / 多阶段编辑"等复杂流程时才追加（少见）
 ├── <Menu>List.vue                    # 列表页（≤ 50 行 script setup，仅装配）
-├── <EntityName>EditDialog.vue        # 创建 / 编辑弹窗（如有 create / edit 动作）—— 自包含，无伴生 composable
+├── <EntityName>Edit.vue              # 创建 / 编辑弹窗（如有 create / edit 动作）—— 自包含，无伴生 composable；文件名不带 Dialog / Drawer 后缀
 ├── <EntityName>Form.vue              # 创建 / 编辑表单路由页（如富文本编辑这种不适合 Dialog 的场景）
-└── <EntityName>Detail.vue            # 详情页（如有 view 动作 / 详情需要独立路由）
+└── <EntityName>Detail.vue            # 详情页（单一内容直接放此处；多内容模块时拆独立 detail/ 目录、与列表同级，见下"详情页多内容模块"）
 ```
 
 > 按需生成，没有该动作的就别建空文件。
+
+> **🛑 一个菜单一个目录,目录即命名空间,平铺在 `views/` 下。** 一级菜单挂多个二级菜单时,**不建只分组的父目录**,每个二级菜单各自建 `views/<父>-<二级>/`(目录名带一级前缀),四件套放进去;一级菜单本身即叶子(只挂一个菜单)就直接 `views/<菜单>/`,不加前缀。文件名出现 `<entity>-api.ts` / `<entity>-constants.tsx` 的实体前缀,就是目录塞了多个菜单 —— 拆目录、去前缀。
+>
+> ```
+> ✅ src/views/<父>-<二级A>/   api.ts  constants.tsx  use<二级A>.ts  <二级A>List.vue
+>    src/views/<父>-<二级B>/   api.ts  constants.tsx  use<二级B>.ts  <二级B>List.vue
+>
+> ❌ src/views/<父>/           ← 多出一层只分组、自己没有页面文件的父目录
+>    ├── <二级A>/  ...
+>    └── <二级B>/  ...
+>
+> ❌ src/views/<父>/           ← 多个菜单挤一个目录,被迫给文件加实体前缀
+>    ├── <二级A>-api.ts  <二级A>List.vue
+>    └── <二级B>List.vue
+> ```
 
 ### Composable 文件拆分原则
 
@@ -171,7 +188,7 @@ src/views/<menu-name>/
 ```
 src/views/energy-value/
 ├── useEnergyValue.ts          → 导出 useEnergyValue（列表 + 充值 Dialog 的 visibility 与 submit handler）
-└── EnergyRechargeDialog.vue   → 自己持有 formModel / submitting / rules / validators
+└── EnergyRecharge.vue        → 充值弹窗，自己持有 formModel / submitting / rules / validators（文件名不带 Dialog 后缀）
 ```
 
 ✅ 复杂详情页（少见）：
@@ -188,7 +205,7 @@ src/views/contract-approval/
 src/views/energy-value/
 ├── useEnergyValue.ts
 ├── useEnergyRechargeDialog.ts  ← ❌ 把 Dialog 的 formModel / submitting / rules 抽出来
-└── EnergyRechargeDialog.vue    ← 空壳，只剩 template
+└── EnergyRecharge.vue          ← 空壳，只剩 template
 ```
 
 ❌ 反例 2（每个 .vue 都配一个 composable）：
@@ -201,11 +218,33 @@ useNoticeDetail.ts       ← ❌ 没有复杂操作流的详情页不需要 comp
 
 **判错信号**：composable 文件名里出现 `Dialog` / `Drawer` / `Modal` / `Popover` 这类**组件形态词**，或者跟某个具体 `.vue` 子组件一一对应 —— 都是反模式。composable 名按**业务 / 菜单 / 视图**命名，不按**组件形态**命名。
 
+### 详情页多内容模块 → 独立 `detail/` 目录（与列表同级，扁平化）
+
+详情页有多个内容模块（基础信息 / 字段表 / 密文 / 存证…）就拆。在**菜单目录内**建 `detail/` 子目录（与列表四件套同级，不单独建 `list/` 子目录），内部**扁平化**：
+
+```
+src/views/<menu>/             ← 菜单目录：列表四件套直接放根
+├── api.ts / constants.tsx / use<Menu>.ts / <Menu>List.vue
+└── detail/                   ← 菜单目录内唯一子目录，与列表文件同级
+    ├── <Menu>Detail.vue      ← 装配页：只摆位，<script setup> ≤ 50 行
+    ├── use<Menu>Detail.ts    ← 详情 composable
+    └── <Entity>Xxx.vue       ← 每个内容模块一个独立组件
+```
+
+铁律：
+
+- **扁平化**：`detail/` 只放装配页 + composable + 模块组件，不套 `components/`，不另建 `constants.tsx` / `utils.ts`（列配置内联进模块组件，通用工具复用全局）。
+- **装配页只装配**：每个内容模块拆独立 `.vue`，装配页只负责摆位。
+- **composable 进 `detail/`**，不与列表 `use<Menu>.ts` 混在一起。
+- 命名守无形态后缀：`<Entity>BasicInfo.vue`，不带 `Card` / `Panel` / `Dialog` 后缀。
+
+单一内容、无模块边界的简单详情不拆，`<Entity>Detail.vue` 放菜单目录即可。样板：`views/<menu>/detail/`。
+
 ### Dialog 模式 vs 路由表单模式
 
 | 场景                                       | 推荐            | 文件                                                                         |
 | ------------------------------------------ | --------------- | ---------------------------------------------------------------------------- |
-| 字段少、操作快、不离开列表上下文           | **Dialog 弹窗** | `<EntityName>EditDialog.vue` + 主 composable 里加 `handleEditSubmit` handler |
+| 字段少、操作快、不离开列表上下文           | **Dialog 弹窗** | `<EntityName>Edit.vue` + 主 composable 里加 `handleEditSubmit` handler |
 | 富文本编辑 / 字段超多 / 需要专注的输入流程 | **独立路由页**  | `<EntityName>Form.vue` + `use<EntityName>Form.ts`                            |
 
 ## 生成步骤
@@ -452,7 +491,7 @@ template 部分用 `pro-table` + `search-form` 复合；script setup 仅做装�
    - 视觉上的"页面主体"和"覆盖层"分得很干净，读模板一眼看清
    - element-plus Dialog/Drawer 自带 `append-to-body` 时行为更一致
 3. **禁止写自定义 `<style scoped>` class**：项目已集成 UnoCSS，所有页面级样式用原子类（`h-full` / `flex` / `gap-3` / `rounded-2` 等）。`<style scoped>` 只允许出现在**必须**用到的 element-plus 深度覆盖（`:deep(.el-input__wrapper)` 等），且应**极少**。任何形如 `.system-manage-page { min-height: 0 }` 的自定义 class 都是反模式 —— 直接 `min-h-0` 原子类替代。
-4. **Dialog / Drawer 弹层组件必须用 `defineAsyncComponent` 动态引入**：`import XxxDialog from './XxxDialog.vue'` 是**反模式** —— 这些弹窗只在用户打开时才渲染，静态 import 会导致首屏打包时把弹窗代码（含 el-dialog / el-form / el-input 及其子依赖）全部打进主 chunk。**必须**用 `const XxxDialog = defineAsyncComponent(() => import('./XxxDialog.vue'))`，让 Vite 将其拆分为独立 chunk、按需加载。（`defineAsyncComponent` 已通过 `unplugin-auto-import` 全局导入，无需手动 import。）
+4. **Dialog / Drawer 弹层组件必须用 `defineAsyncComponent` 动态引入**：`import XxxEdit from './XxxEdit.vue'` 是**反模式** —— 这些弹窗只在用户打开时才渲染，静态 import 会导致首屏打包时把弹窗代码（含 el-dialog / el-form / el-input 及其子依赖）全部打进主 chunk。**必须**用 `const XxxEdit = defineAsyncComponent(() => import('./XxxEdit.vue'))`，让 Vite 将其拆分为独立 chunk、按需加载。（注意：弹框 / 抽屉 `.vue` 文件名不带 `Dialog` / `Drawer` 形态后缀，用 业务 + 动作 命名。）（`defineAsyncComponent` 已通过 `unplugin-auto-import` 全局导入，无需手动 import。）
 
 ```vue
 <template>
@@ -472,7 +511,7 @@ template 部分用 `pro-table` + `search-form` 复合；script setup 仅做装�
   </div>
 
   <!-- ⬇️ 弹层组件挂在 view-w 同级，不要嵌进上面的 div -->
-  <<EntityName>EditDialog
+  <<EntityName>Edit
     v-model="editDialogVisible"
     :row="editingRow"
     :on-submit="handleEditSubmit"
@@ -482,7 +521,7 @@ template 部分用 `pro-table` + `search-form` 复合；script setup 仅做装�
 <script setup lang="ts">
 import { use<EntityName> } from './use<EntityName>'
 
-const <EntityName>EditDialog = defineAsyncComponent(() => import('./<EntityName>EditDialog.vue'))
+const <EntityName>Edit = defineAsyncComponent(() => import('./<EntityName>Edit.vue'))
 
 const {
   columns,
@@ -496,7 +535,7 @@ const {
 </script>
 ```
 
-### Step 5 — \<EntityName\>EditDialog.vue（如有 create / edit）
+### Step 5 — \<EntityName\>Edit.vue（如有 create / edit）
 
 **严格遵守"主业务 / 子业务分层"约定**（见顶部设计哲学）：
 
@@ -517,7 +556,7 @@ src/views/energy-value/
 ├── useEnergyValue.ts
 ├── useEnergyRechargeDialog.ts    ← 错。"Dialog" 后缀是反模式信号
 │   └── 里面装着 formModel / submitting / resetForm / submitRecharge
-└── EnergyRechargeDialog.vue       ← 变成空壳，rules / validators 还得回写在这里
+└── EnergyRecharge.vue             ← 变成空壳，rules / validators 还得回写在这里
 ```
 
 ```ts
@@ -538,7 +577,7 @@ export const useEnergyRechargeDialog = (options: { afterSuccess?: () => Promise<
 ✅ **正确结构**：composable 文件不存在，Dialog 自己持有全部状态，父端通过 `props.onSubmit` 注入业务编排。
 
 ```vue
-<!-- ✅ EnergyRechargeDialog.vue —— 所有状态在这里 -->
+<!-- ✅ EnergyRecharge.vue —— 所有状态在这里（文件名不带 Dialog 后缀） -->
 <script setup lang="ts">
 import type { FormInstance, FormRules } from "element-plus";
 
@@ -650,7 +689,7 @@ export const useEnergyValue = () => {
 
 ```vue
 <!-- ✅ 列表页装配：rechargeVisible + handleRechargeSubmit 注入 Dialog -->
-<EnergyRechargeDialog
+<EnergyRecharge
   v-model="rechargeVisible"
   :on-submit="handleRechargeSubmit"
 />
@@ -795,21 +834,26 @@ const handleSubmit = async () => {
 
 并按需更新 `DEFAULT_ROUTE_PATH`（如果这是用户登录后的首屏模块）。
 
-## 强制规则
+## 强制规则（M1–M16）
 
-1. **业务下拉一律用组件，不在 constants 里硬塞 options**：需要远程下拉时调 `vue-scaffold-component` 子 skill 先封装一个，再在 constants `render` 里用
-2. **api 文件函数名统一标准化**：`getList` / `getDetail` / `createItem` / `updateItem` / `deleteItem`，**不加实体名前缀**。引入风格上 **推荐** `import * as api from './api'` + `api.getList(...)`（更清楚、不用频繁改 import），但**不强制** —— 命名导入 `import { getList } from './api'` 同样可接受
-3. **api 文件返回 Promise<T>**，不包 ApiResponse
-4. **composable 名字必须以 `use` 开头**
-5. **view 的 `<script setup>` 不超过 50 行**，超过就该拆 composable
-6. **错误 catch 块默认空**（错误信息已由 axios 拦截器统一 toast）
-7. **reactive → ref**：所有状态用 `ref()`
-8. **路由 meta.title 直接中文**
-9. **Dialog 不直接调业务接口**：通过 `props.onSubmit: (payload) => Promise<void>` 把提交逻辑注入 Dialog；Dialog `await props.onSubmit()`，`try/finally` 保证 submitting 一定重置，成功后 `visible.value = false`
-10. **主 composable handler 是纯 async 函数**：无 callback 参数，失败让 axios 自然 throw 使 Dialog 保持打开，成功时 `refresh()`
-11. **view 模板根 `<div>` 必须挂 `view-w`**：这是 view 页面的统一标识类，缺了就不算合规 view
-12. **Dialog / Drawer 等弹层组件挂在 view-w 同级，不嵌进根 `<div>` 里**：Vue 3 多根节点写法 —— view-w 装"页面主体"，弹层装"覆盖层"，结构分明
-13. **禁止自定义 `<style scoped>` class**：UnoCSS 原子类已经够用，`<style scoped>` 只能放 element-plus 深度覆盖（`:deep(...)`）。任何 `.system-xxx-page { min-height: 0 }` 这种自定义 class 都是反模式
+> 这些编号是稳定 ID，被 `vue-scaffold-review` 报告引用。修改本节请保持编号不变。
+
+1. **[M1] 业务下拉一律用组件，不在 constants 里硬塞 options**：需要远程下拉时调 `vue-scaffold-component` 子 skill 先封装一个，再在 constants `render` 里用
+2. **[M2] api 文件函数名统一标准化**：`getList` / `getDetail` / `createItem` / `updateItem` / `deleteItem`，**不加实体名前缀**。引入风格上 **推荐** `import * as api from './api'` + `api.getList(...)`（更清楚、不用频繁改 import），但**不强制** —— 命名导入 `import { getList } from './api'` 同样可接受
+3. **[M3] api 文件返回 Promise<T>**，不包 ApiResponse
+4. **[M4] composable 名字必须以 `use` 开头**
+5. **[M5] view 的 `<script setup>` 不超过 50 行**，超过就该拆 composable
+6. **[M6] 错误 catch 块默认空**（错误信息已由 axios 拦截器统一 toast）
+7. **[M7] reactive → ref**：所有状态用 `ref()`
+8. **[M8] 路由 meta.title 直接中文**
+9. **[M9] Dialog 不直接调业务接口**：通过 `props.onSubmit: (payload) => Promise<void>` 把提交逻辑注入 Dialog；Dialog `await props.onSubmit()`，`try/finally` 保证 submitting 一定重置，成功后 `visible.value = false`
+10. **[M10] 主 composable handler 是纯 async 函数**：无 callback 参数，失败让 axios 自然 throw 使 Dialog 保持打开，成功时 `refresh()`
+11. **[M11] view 模板根 `<div>` 必须挂 `view-w`**：这是 view 页面的统一标识类，缺了就不算合规 view
+12. **[M12] Dialog / Drawer 等弹层组件挂在 view-w 同级，不嵌进根 `<div>` 里**：Vue 3 多根节点写法 —— view-w 装"页面主体"，弹层装"覆盖层"，结构分明
+13. **[M13] 禁止自定义 `<style scoped>` class**：UnoCSS 原子类已经够用，`<style scoped>` 只能放 element-plus 深度覆盖（`:deep(...)`）。任何 `.system-xxx-page { min-height: 0 }` 这种自定义 class 都是反模式
+14. **[M14] composable 命名禁区**：composable 文件名禁带组件形态后缀（`use*Dialog.ts` / `use*Drawer.ts` / `use*Modal.ts` / `use*Popover.ts`），且一个菜单目录默认只有一个主 composable —— 详见下方"🛑 composable 命名禁区"
+15. **[M15] 弹层 `.vue` 文件名禁带形态后缀**：`<Entity>EditDialog.vue` / `<Entity>DetailDrawer.vue` 是反模式，用 业务 + 动作 命名（`<Entity>Edit.vue` / `<Entity>Detail.vue`），组件形态由内部的 `el-dialog` / `el-drawer` 体现
+16. **[M16] 弹层组件必须 `defineAsyncComponent` 动态引入**：列表页静态 `import XxxEdit from './XxxEdit.vue'` 是反模式（详见 Step 4 模板根节点规范第 4 条）
 
 > **🛑 composable 命名禁区（最强规则）**：
 >
@@ -821,7 +865,8 @@ const handleSubmit = async () => {
 > **模块目录内文件命名约定**：
 >
 > - **`use<Menu>.ts`** / **`use<Menu>Detail.ts`** —— composable，**驼峰** + `use` 前缀，**按业务命名**
-> - **`<EntityName>List.vue`** / **`<EntityName>EditDialog.vue`** —— Vue 组件，**PascalCase**
+> - **`<EntityName>List.vue`** / **`<EntityName>Edit.vue`** —— Vue 组件，**PascalCase**
+> - **弹框 / 抽屉等覆盖层组件 `.vue` 文件名不带 `Dialog` / `Drawer` 形态后缀**：用 业务 + 动作 命名 —— ✅ `<EntityName>Edit.vue` / `<EntityName>Detail.vue`，❌ `<EntityName>EditDialog.vue` / `<EntityName>DetailDrawer.vue`。组件形态由 `.vue` 内部的 `el-dialog` / `el-drawer` 体现，不进文件名（与 composable 不带形态后缀同理）
 > - **`api.ts`** / **`constants.tsx`** —— 模块固定四件套，**全小写**
 > - **其它工具 / 共享辅助 `.ts`**（如 `role-resource.ts` / `notice-format.ts`）—— 既不是 composable，也不是组件，**用 kebab-case** 跟前两类区别开。看到 kebab 命名一眼知道"这是个纯函数集 / 数据辅助"，不是带响应式状态的 hook。
 
@@ -830,8 +875,11 @@ const handleSubmit = async () => {
 - ❌ 在 `<Module>List.vue` 里写业务逻辑（拆 composable）
 - ❌ `getXxxList().then(res => res.data?.data)` 这种链式（用 `await + 拦截器`）
 - ❌ **API 函数名带实体前缀**：`getRoleList` / `createRole` / `deleteContractWhitelist`（模块目录已经是命名空间，应统一为 `getList` / `createItem`）
+- ❌ **模块文件名带实体前缀**：`<entity>-api.ts` / `<entity>-constants.tsx`（前缀＝目录里塞了多个菜单的信号，应拆成各自的 `views/<父>-<子>/`，文件名回归裸 `api.ts`）
+- ❌ **多个二级菜单挤进一个目录**：一个目录里并排 `<二级A>List.vue` + `<二级B>List.vue` + `<entity>-*`（每个菜单应各自建 `views/<父>-<子>/`，不建只分组的父目录）
 - ❌ 字典 select 用 `el: 'select', options: xxxOptions`（用组件 + render）
 - ❌ 弹窗模板塞进列表页 vue 文件（独立 vue 文件 + props/emit）
+- ❌ **弹框 / 抽屉 `.vue` 文件名带 `Dialog` / `Drawer` 形态后缀**：`RoleEditDialog.vue` / `RoleDetailDrawer.vue` 是反模式 —— 用 业务 + 动作 命名 `RoleEdit.vue` / `RoleDetail.vue`
 - ❌ **把 Dialog 的 formModel / submitting / rules 抽到 `useXxxDialog()` / `useXxxCreate()` 这种独立 hook**（状态散落，应该自包含在 Dialog 内部）
 - ❌ **存在任何 `use*Dialog.ts` / `use*Drawer.ts` / `use*Modal.ts` / `use*Popover.ts` 文件**（这种命名本身就是反模式信号 —— composable 不按组件形态命名，按业务命名）
 - ❌ **一个 `.vue` 配一个 composable**（默认一个菜单一个主 composable；详情页有复杂操作流时才追加 `use<Menu>Detail.ts`）

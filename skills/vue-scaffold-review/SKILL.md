@@ -24,7 +24,7 @@ allowed-tools:
 
 ### 1. 规范来源单一：永远读规范 skill 本身
 
-本 skill **不复制任何规则**。每次执行先 Read `<本仓库>/skills/vue-scaffold-app/SKILL.md` 与其 `references/*.md`（`R1`–`R12`、`A1`–`A12`、`S-*`，其中 `A12` 为禁止全量引入 element-plus CSS），再 Read `<本仓库>/skills/vue-scaffold-layout/SKILL.md`（`L1`–`L7`），从中提取编号的当前定义。
+本 skill **不复制任何规则**。每次执行先 Read `<本仓库>/skills/vue-scaffold-app/SKILL.md` 与其 `references/*.md`（`R1`–`R14`、`A1`–`A14`、`S-*`），再 Read `<本仓库>/skills/vue-scaffold-module/SKILL.md`（`M1`–`M16`，模块内部结构规则）与 `<本仓库>/skills/vue-scaffold-layout/SKILL.md`（`L1`–`L8`），从中提取编号的当前定义。
 
 规范文档改了，本 skill 自动跟着改，**零同步成本**。
 
@@ -38,9 +38,9 @@ allowed-tools:
 
 | 层 | 检测手段 | 适用规则 |
 |---|---|---|
-| 第一层 | 机械 grep | A1–A12 反模式（正则一打就中） |
-| 第二层 | Glob + 文件名比对 | S-* 结构 / 命名规则 |
-| 第三层 | Read + 语义判断 | R1–R13 需要理解上下文的硬规则 |
+| 第一层 | 机械 grep | A1–A14 反模式（正则一打就中） |
+| 第二层 | Glob + 文件名比对 | S-* 与 M14 / M15 等结构 / 命名规则 |
+| 第三层 | Read + 语义判断 | R1–R14、M12 / M16 等需要理解上下文的硬规则 |
 
 不同层用不同手段，**别一把梭**。第一层 1 秒出结果，第三层最慢但价值最高（linter 干不了）。
 
@@ -67,14 +67,16 @@ allowed-tools:
 3. <本仓库>/skills/vue-scaffold-app/references/core-utils.md
 4. <本仓库>/skills/vue-scaffold-app/references/router-store.md
 5. <本仓库>/skills/vue-scaffold-app/references/layout-and-system-views.md
-6. <本仓库>/skills/vue-scaffold-layout/SKILL.md   ← 布局与高度契约规则 L1–L7 的权威来源
+6. <本仓库>/skills/vue-scaffold-module/SKILL.md   ← 模块结构规则 M1–M16 的权威来源
+7. <本仓库>/skills/vue-scaffold-layout/SKILL.md   ← 布局与高度契约规则 L1–L8 的权威来源
 ```
 
 从中提取：
-- R1–R13 的最新文字
-- A1–A12 的最新文字
+- R1–R14 的最新文字
+- A1–A14 的最新文字
 - S-* 的最新文字与所在锚点的具体约束
-- L1–L7 的最新文字（来自 `vue-scaffold-layout`）
+- M1–M16 的最新文字（来自 `vue-scaffold-module`）
+- L1–L8 的最新文字（来自 `vue-scaffold-layout`）
 
 > **本仓库路径解析**：本 skill 文件实际通过 junction / symlink 安装到 `~/.claude/skills/`，要找到原仓库可以：
 > 1. 优先看用户在对话中给过的仓库路径
@@ -96,7 +98,7 @@ allowed-tools:
 
 把命中文件列出来（chat 里显示数量与示例 3–5 个文件名，避免刷屏）。**不调用任何 git 命令**——不读 HEAD、不比 diff、不依赖分支。
 
-### Step 3 — 第一层：机械 grep（A1–A12）
+### Step 3 — 第一层：机械 grep（A1–A14）
 
 按 `references/grep-patterns.md` 的清单逐条跑 `Grep`。每条规则带：
 - 正则
@@ -105,7 +107,7 @@ allowed-tools:
 
 实操：把所有 A* 规则的 Grep 调用**并行发**（同一条消息里多个 Grep tool call），一次拿全部命中。
 
-### Step 4 — 第二层：结构 / 命名（S-*）
+### Step 4 — 第二层：结构 / 命名（S-* 与 M14 / M15）
 
 按 `references/semantic-checks.md` 中"结构层"一节：
 
@@ -113,9 +115,12 @@ allowed-tools:
 - `[S-utils-barrel]` — 检查 `src/utils/index.ts` 是否存在
 - `[S-views-root]` — `Glob src/views/*.ts`，命中即违规
 - `[S-module-quartet]` — 每个 `src/views/<m>/`，检查是否齐 `api.ts` + `constants.tsx` + `use<M>.ts` + `<M>List.vue`（缺则告警，但允许 `<m>` 是分组目录，需结合是否存在 `<X>List.vue` 判断）
+- `[S-menu-dir-namespace]` — `Glob src/views/**/*-api.ts` / `**/*-constants.tsx`（带实体前缀的模块文件）命中即违规；或一个目录里出现 ≥2 套互不相干的页面 `.vue`（如 `<二级A>List.vue` + `<二级B>List.vue`）→ 目录塞了多个菜单，应拆成 `views/<父>-<子>/` 平铺目录、文件去前缀
 - `[S-system-views-split]` — `Glob src/system-views/`，未存在告警；登录 / 注册 / 重置密码在 `views/` 下而非 `system-views/` 也告警
+- `[M14]` — `Glob src/views/**/use*Dialog.ts` / `use*Drawer.ts` / `use*Modal.ts` / `use*Popover.ts`，命中即违规；同一菜单目录里 `use*.ts` 多于一个（`use<Menu>Detail.ts` / `use<Menu>Form.ts` 路由页例外）也告警
+- `[M15]` — `Glob src/views/**/*Dialog.vue` / `*Drawer.vue` / `*Modal.vue`，命中即违规（文件名带组件形态后缀）
 
-### Step 5 — 第三层：语义判断（R1–R13）
+### Step 5 — 第三层：语义判断（R1–R14 与 M12 / M16）
 
 按 `references/semantic-checks.md` 中"语义层"一节：
 
@@ -124,22 +129,25 @@ allowed-tools:
 - **R2** composable 拆分：检查 `views/<m>/` 是否存在 `use<M>.ts`；不存在但 `<M>List.vue` 有 >30 行业务逻辑即违规
 - **R7** UnoCSS 优先：Read `.vue` 的 `<style scoped>`，统计行数与是否在做"可用原子类替代"的事
 - **R10** 错误已 toast：Grep `catch.*ElMessage\.error` 找疑似双重 toast，再 Read 上下文确认
+- **M12** 弹层挂 view-w 同级：Read 各 `<X>List.vue` 模板，弹层组件嵌在根 `view-w` div 内部即违规
+- **M16** 弹层动态引入：列表页 `<script setup>` 里静态 `import Xxx from './Xxx.vue'` 的，Read 确认该组件是弹层（v-model visible 用法）→ 违规；详情装配页静态引入内容模块组件不算
 
 这一层执行慢，给用户进度反馈（"读 12/47 个文件..."）。
 
-### Step 5.5 — 布局合规（L1–L7，来自 `vue-scaffold-layout`）
+### Step 5.5 — 布局合规（L1–L8，来自 `vue-scaffold-layout`）
 
-L1–L7 多数可机械 grep，少数需 Read 判断。按下表执行（具体文字以 `vue-scaffold-layout/SKILL.md` 为准）：
+L1–L8 多数可机械 grep，少数需 Read 判断。按下表执行（具体文字以 `vue-scaffold-layout/SKILL.md` 为准）：
 
 | 规则 | 检测手段 | 命中即违规的信号 |
 |---|---|---|
 | `[L1]` layout-main padding | Read `src/layout/Main.vue` | `layout-main` 那行不是 `flex-1 overflow-hidden p-4 md:px-5` |
 | `[L2]` 禁止溢出 / sticky 慎用 | Grep `overflow-auto\|overflow-y-scroll`（限 `src/layout/Main.vue` 与各 `views/**/*.vue` 根节点）；Grep `StickyContainer\|sticky-container`（用量统计） | Main.vue 出现 `overflow-auto`；或 view 根节点直接挂 `overflow-auto/scroll` 凑合滚动；或 `sticky-container` 被大面积套用（逐个 Read 确认是否真有超长内容，疑似滥用则 🟢 提示） |
 | `[L3]` 不准半截 | Read `views/**/*.vue` 根节点 | 详情/表单页根节点既无 `pro-table`、又无 `bg-white`/`page-fill-card`，且无 `h-full`（灰底会透出来） |
-| `[L4]` 菜单收起态 | Read `src/layout/Layout.vue` | 无展开/收起两态，或收起态不是 `w-16`（只剩图标）；展开宽度不限具体值，不命中 |
+| `[L4]` 菜单收起态 | Read `src/layout/TheSidebar.vue`（不存在则 `Layout.vue`） | 无展开/收起两态，或收起态不是 `w-16`（只剩图标）；展开宽度不限具体值，不命中 |
 | `[L5]` 操作列用 width | Grep `label: ['\"]操作` 定位 `constants.tsx`，Read 该列 | 操作列（`fixed: 'right'`）用了 `minWidth` 而非 `width` |
 | `[L6]` view 根节点挂 view-w | Glob `src/views/**/*.vue`（独立路由页），Read 根节点首个 `<div>` | 根节点缺 `view-w`，或用自定义 class 替代 |
-| `[L7]` 菜单由路由派生 | Read `src/layout/TheMenu.vue` 与 `useLayout.ts` | TheMenu 写死菜单数组（对象字面量 title/path）/ 不渲染 `TheMenuItem`；或 `useLayout` 直接返回原始 `menuRoutes` 未走 `buildMenuTree` |
+| `[L7]` 菜单由路由派生 | Read `src/layout/TheMenu.vue` 与 `useLayout.ts` | TheMenu 写死菜单数组（对象字面量 title/path）/ 不渲染 `TheMenuItem`；或 `useLayout` 把原始路由直接返回、未经派生函数处理（标准名 `buildMenuTree`，叫别的名字但做同样的事不算违规） |
+| `[L8]` 外壳组件职责边界 | Read `src/layout/Layout.vue` 与 `TheSidebar.vue` / `TheMenu.vue` | `Layout.vue` 模板出现 `aside` 外壳 / 品牌 / 页脚等内部 DOM（应只装配区域组件）；或 `TheMenu` 里塞了品牌 / 页脚 |
 
 `[L6]` 注意排除：非路由页的纯子组件（dialog / 局部片段）不要求挂 `view-w`——只查挂到 router 的 list/detail/表单主页面。
 
@@ -175,9 +183,11 @@ L1–L7 多数可机械 grep，少数需 Read 判断。按下表执行（具体�
 
 | 级别 | 含义 | 包含规则 |
 |---|---|---|
-| 🔴 严重 | 反模式 / 不可违背 | A1–A12、R1 / R3 / R4 / R5 / R9 / R10 / R11、`[S-utils-barrel]`、`[S-views-root]`、`[L2]`（Main.vue 改 overflow-auto）、`[L6]` |
-| 🟡 警告 | 结构 / 命名 / 强建议 | R2 / R8 / R13、`[S-utils-naming]`、`[S-module-quartet]`、`[S-system-views-split]`、`[L1]` / `[L3]` / `[L4]` / `[L5]` / `[L7]` |
+| 🔴 严重 | 反模式 / 不可违背 | A1–A12、R1 / R3 / R4 / R5 / R9 / R10 / R11、`[S-utils-barrel]`、`[S-views-root]`、`[M14]`（composable 形态后缀命名）、`[L2]`（Main.vue 改 overflow-auto）、`[L6]` |
+| 🟡 警告 | 结构 / 命名 / 强建议 | A13 / A14、R2 / R8 / R13 / R14、`[S-utils-naming]`、`[S-module-quartet]`、`[S-menu-dir-namespace]`、`[S-system-views-split]`、`[M12]` / `[M15]` / `[M16]`、`[L1]` / `[L3]` / `[L4]` / `[L5]` / `[L7]` / `[L8]` |
 | 🟢 建议 | 风格 / 取舍 | R7、R12、`[L2]`（sticky-container 疑似滥用） |
+
+> M1–M11 / M13 与 R/A/S/L 系列存在交叠（如 M7≈R3、M8≈R8、M11≈L6、M13≈R7），报告中**优先引用 R/A/S/L 编号**，M 编号只用于上面列出的模块专属规则（M12 / M14 / M15 / M16），避免同一违规挂两个编号。
 
 `R12`（KeepAlive 策略）规范本身说"不强制"，所以本 skill 永远归类为 🟢，且只在用户**两种策略混用**时才告警。
 
@@ -204,8 +214,8 @@ L1–L7 多数可机械 grep，少数需 Read 判断。按下表执行（具体�
 ## 引用文件
 
 详细检测规则与报告骨架：
-- `references/grep-patterns.md` — 第一层 A1–A12 的全部 grep 规则
-- `references/semantic-checks.md` — 第二层 S-* 与第三层 R1–R13 的判断框架
+- `references/grep-patterns.md` — 第一层 A1–A14 的全部 grep 规则
+- `references/semantic-checks.md` — 第二层 S-* / M14 / M15 与第三层 R1–R14 / M12 / M16 的判断框架
 - `references/report-template.md` — 报告 markdown 骨架
 
 执行时按需打开对应 reference。

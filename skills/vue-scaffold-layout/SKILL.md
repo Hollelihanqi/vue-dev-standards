@@ -30,7 +30,7 @@ allowed-tools:
 ```
 #app                       width:100vw; height:100vh        ← 唯一的 100vh 源头（App.vue 全局 <style>）
 └ .layout-root             flex h-full w-full overflow-hidden
-  ├ aside.layout-sider     flex-shrink-0 h-full overflow-hidden  ← 展开 w-[220px] / 收起 w-16
+  ├ <TheSidebar/>          渲染 aside.layout-sider（品牌区 + <TheMenu/> + 平台页脚），展开 w-[220px] / 收起 w-16
   └ section.layout-body    flex min-h-screen min-w-0 flex-1 flex-col
     ├ .layout-header       flex h-16 ...                     ← 固定高 64px
     ├ .layout-breadcrumb   flex h-10 ...                     ← 固定高 40px
@@ -44,7 +44,7 @@ allowed-tools:
 ## 六条强制规则（均带真实参数）
 
 > **规则编号（供 `vue-scaffold-review` 引用）**：
-> `L1` layout-main padding · `L2` 撑满不溢出 / sticky-container 慎用 · `L3` 不准半截（白底 + 按需圆角）· `L4` 菜单宽度（展开自定 / 收起 w-16）· `L5` 操作列用 width · `L6` view 根节点挂 view-w · `L7` 菜单由路由派生（与面包屑同源）。
+> `L1` layout-main padding · `L2` 撑满不溢出 / sticky-container 慎用 · `L3` 不准半截（白底 + 按需圆角）· `L4` 菜单宽度（展开自定 / 收起 w-16）· `L5` 操作列用 width · `L6` view 根节点挂 view-w · `L7` 菜单由路由派生（与面包屑同源）· `L8` 外壳组件职责边界（Layout 只装配 / TheSidebar 拥有侧栏 / TheMenu 只管菜单）。
 
 ### 规则 L1 · layout-main 的 padding 是 `p-4 md:px-5`
 
@@ -99,6 +99,19 @@ allowed-tools:
 
 > ⚠️ **list 页被裁 / 不滚，根因只会是 pro-table 组件本身没按上面的高度契约实现**（例如工程里塞了一个去掉高度的简化版）。修复方式是**换回标准 pro-table**（从内部组件包 / `vue-scaffold-base-components` 取），**绝不是**在调用方打补丁——给业务页或 `layout-main` 套 `overflow-auto`、给 list 页手加滚动容器都是错的，会掩盖组件缺陷并破坏 L2。
 
+#### pro-table vs HTable —— 选型边界（必须分清）
+
+两者功能不同，按场景选，业务页一律**不准裸用 `<el-table>`**：
+
+| 场景 | 用哪个 | 说明 |
+|---|---|---|
+| 标准 CRUD **列表页**（有查询表单 + 分页） | `pro-table` | = `search-form` + `HTable` 组合，自带查询/重置联动、白底卡片、`flex-1 h-0` 高度自适应（满足 L2/L3） |
+| 只要表格、**无查询表单**（详情页子表、弹窗内表格、无查询的简单表） | `HTable`（`<Table>`） | 纯表格：列配置 / 排序 / 分页 / 合计行 / 多级表头 / 空状态，可传 `request-api` 自拉或直接喂 `data`，不含查询表单 |
+| 原生 `<el-table>` | ❌ 禁止 | 缺特性应去扩展 `HTable`，不在业务页裸用（见 `[A14]`） |
+
+- **判据**：页面要不要顶部查询表单——要 → `pro-table`；不要 → `HTable`。
+- `pro-table` 已包含 `HTable`，二者不叠用（别在 `pro-table` 外再套 `HTable`）。
+
 ### 规则 L3 · 任何页面都不能"半截"——view 自带白底（列表页不需要圆角，pro-table 已自带）
 
 "半截" = view 没铺满白色卡片，底部背景色透出来。**每个 view 根节点必须 `h-full` 撑满**，白底和圆角按类型处理：
@@ -121,7 +134,7 @@ allowed-tools:
 >     </template>
 >   </pro-table>
 > </div>
-> <XxxCreateDialog v-model="createDialogVisible" />
+> <XxxCreate v-model="createDialogVisible" />
 > ```
 
 ### 规则 L4 · 左侧菜单宽度（展开自定，收起 w-16）
@@ -162,8 +175,8 @@ allowed-tools:
     <pro-table ... />
   </div>
 
-  <!-- 弹层组件挂在 view-w 同级，不嵌进根 div（见 vue-scaffold-module 规则） -->
-  <SomeCreateDialog v-model="visible" />
+  <!-- 弹层组件挂在 view-w 同级，不嵌进根 div（见 vue-scaffold-module 规则）；文件名不带 Dialog / Drawer 后缀 -->
+  <SomeCreate v-model="visible" />
 </template>
 ```
 
@@ -188,6 +201,23 @@ return { menuRoutes: layoutMenuRoutes /* ... */ }
 </el-menu>
 ```
 
+### 规则 L8 · 外壳组件职责边界（Layout 只装配）
+
+```
+Layout.vue        只装配区域，自身几乎无样式
+├ <TheSidebar/>   aside 外壳 + 品牌区 + <TheMenu/> + 平台页脚（含侧栏 scoped 样式）
+└ <section>
+  ├ <TheHeader/>
+  ├ <TheBreadcrumb/>
+  └ <Main/>
+TheMenu.vue       只含 el-menu + 递归 TheMenuItem，不含品牌 / 页脚
+```
+
+- `Layout.vue` 模板只能是区域组件装配；出现 `aside` 外壳 / 品牌 / 页脚等内部 DOM 即违规，下沉到对应区域组件。
+- 侧栏外壳、品牌、页脚及其 scoped 样式归 `TheSidebar.vue`，不留在 `Layout.vue`。
+- 命名即职责：`TheMenu` 只能是菜单。塞品牌 / 页脚进 `TheMenu` 是反模式。
+- 数据 props 自上而下透传（`Layout`→`TheSidebar`→`TheMenu`），事件逐层 emit 回 `Layout` 决策;`TheSidebar` 对菜单事件只透传不决策。
+
 ## 自检清单
 
 起新页面 / review 时逐条过：
@@ -199,3 +229,5 @@ return { menuRoutes: layoutMenuRoutes /* ... */ }
 - [ ] 没有改动外壳 `layout-main` 的 `overflow-hidden` / `p-4 md:px-5`
 - [ ] 菜单有展开/收起两态，收起 `w-16` 只剩图标（展开宽度自定，不限具体值）
 - [ ] 表格操作列用 `width` 不用 `minWidth`，`fixed: 'right'`
+- [ ] `Layout.vue` 只装配区域组件（`TheSidebar`/`TheHeader`/`TheBreadcrumb`/`Main`），没把 `aside` 外壳 / 品牌 / 页脚的内部 DOM 摊在自己模板里（L8）
+- [ ] 侧栏外壳 + 品牌 + 页脚及其 scoped 样式收在 `TheSidebar.vue`；`TheMenu.vue` 只含菜单，无品牌 / 页脚（L8）
