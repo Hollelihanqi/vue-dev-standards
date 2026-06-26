@@ -259,6 +259,62 @@ VITE_RSA_PUBLIC_KEY=<base64 公钥串>
 
 ---
 
+## .gitignore
+
+脚手架默认产物里 Vite 只给一份很薄的 `.gitignore`，**必须用本规范覆盖**——否则 `node_modules` / `dist` / `.env`（含 RSA 私密配置）会被误提交。这是不可省略的根文件。
+
+```gitignore
+# 依赖
+node_modules
+.pnp
+.pnp.*
+
+# 构建产物
+dist
+dist-ssr
+*.local
+
+# Vite 缓存
+.vite
+
+# 自动生成的类型声明（unplugin-auto-import / unplugin-vue-components）
+auto-imports.d.ts
+components.d.ts
+
+# 主题构建产物（ep theme builder 生成，不要手改）
+src/assets/generated/
+
+# 环境变量
+.env
+.env.*
+!.env.example
+
+# 日志
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# 编辑器 / IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+*.sw?
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 类型增量缓存
+*.tsbuildinfo
+```
+
+写到项目根 `.gitignore`。
+
+---
+
 ## .gitattributes
 
 跨平台协作（Windows / macOS / Linux 混合团队）的换行符规范由 `.gitattributes` 强制统一。**写进仓库后 git pull 自动生效，比每人本地配 `core.autocrlf` 可靠**。

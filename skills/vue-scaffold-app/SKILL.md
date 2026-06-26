@@ -41,7 +41,7 @@ allowed-tools:
 
 主流程涉及的配置 / 工具 / 路由 / 状态 / Layout 等一次性基础设施代码模板放在同级 `references/` 目录：
 
-- `references/config-files.md` —— `package.json` / `vite.config.ts` / `uno.config.ts` / `tsconfig*.json` / `.env` / `.gitattributes` / `index.html`
+- `references/config-files.md` —— `package.json` / `vite.config.ts` / `uno.config.ts` / `tsconfig*.json` / `.env` / `.gitignore` / `.gitattributes` / `index.html`
 - `references/core-utils.md` —— `utils/request.ts`（业务码统一处理）/ `utils/crypto.ts`（RSA 分段加密）/ `utils/format.ts`（空值占位 / 日期格式化等显示型辅助）/ `utils/regx.ts`（正则常量 + 基于正则的 element-plus 表单校验 rules 收口）
 - `references/router-store.md` —— `router/index.ts`（守卫 + 面包屑 + document.title）/ `store/index.ts` + `store/app.ts` + `store/auth.ts`
 - `references/layout-and-system-views.md` —— `Layout.vue`（只装配区域）/ `TheSidebar.vue`（侧栏外壳+品牌+菜单+页脚）/ `TheHeader.vue` / `TheMenu.vue`（纯菜单）/ `TheBreadcrumb.vue` / `useLayout.ts` 与 `system-views/login` `register` `reset-password` 全套
@@ -242,9 +242,10 @@ mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,di
 3. `vite.config.ts`（覆盖默认版本，加 alias / 插件 / 代理）
 4. `uno.config.ts`（主题色 + shortcuts）
 5. `.env`（VITE_APP_TITLE / VITE_API_BASE_URL / VITE_API_TIMEOUT / VITE_RSA_PUBLIC_KEY）
-6. `.gitattributes`（跨平台换行符规范）
-7. `index.html`（覆盖默认 `<title>Vite + Vue + TS</title>` 为 `<title>%VITE_APP_TITLE%</title>`，并把 `<script src="/src/main.ts">` 保留）
-8. `src/assets/styles/ress.min.css` —— 直接从 `references/assets-styles/ress.min.css` 复制过去（全局 reset，main.ts 已引入）
+6. `.gitignore`（覆盖 Vite 默认薄版本，确保 `node_modules` / `dist` / `.env` 被忽略）
+7. `.gitattributes`（跨平台换行符规范）
+8. `index.html`（覆盖默认 `<title>Vite + Vue + TS</title>` 为 `<title>%VITE_APP_TITLE%</title>`，并把 `<script src="/src/main.ts">` 保留）
+9. `src/assets/styles/ress.min.css` —— 直接从 `references/assets-styles/ress.min.css` 复制过去（全局 reset，main.ts 已引入）
 
 ### Step 4 — 写核心工具
 

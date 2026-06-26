@@ -218,6 +218,13 @@ TheMenu.vue       只含 el-menu + 递归 TheMenuItem，不含品牌 / 页脚
 - 命名即职责：`TheMenu` 只能是菜单。塞品牌 / 页脚进 `TheMenu` 是反模式。
 - 数据 props 自上而下透传（`Layout`→`TheSidebar`→`TheMenu`），事件逐层 emit 回 `Layout` 决策;`TheSidebar` 对菜单事件只透传不决策。
 
+### 规则 L9 · 业务页只用 `<div>`，布局语义标签仅限 layout 层
+
+`views/` 下的业务页（list / detail / 表单 / 内容模块组件）一律用 `<div>`，**禁用** `section` / `main` / `header` / `footer` / `nav` / `aside` / `article`。
+
+- 这些标签只允许出现在 layout 外壳（`Layout.vue` / `TheSidebar.vue` / `Main.vue`）。
+- 文本级标签不限：`h1~h6` / `p` / `b` / `span` 等照常用。
+
 ## 自检清单
 
 起新页面 / review 时逐条过：
@@ -231,3 +238,4 @@ TheMenu.vue       只含 el-menu + 递归 TheMenuItem，不含品牌 / 页脚
 - [ ] 表格操作列用 `width` 不用 `minWidth`，`fixed: 'right'`
 - [ ] `Layout.vue` 只装配区域组件（`TheSidebar`/`TheHeader`/`TheBreadcrumb`/`Main`），没把 `aside` 外壳 / 品牌 / 页脚的内部 DOM 摊在自己模板里（L8）
 - [ ] 侧栏外壳 + 品牌 + 页脚及其 scoped 样式收在 `TheSidebar.vue`；`TheMenu.vue` 只含菜单，无品牌 / 页脚（L8）
+- [ ] 业务页模板只用 `<div>`，无 `section`/`main`/`header`/`footer`/`nav`/`aside`/`article`（仅限 layout 外壳，L9）

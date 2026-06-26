@@ -98,6 +98,24 @@ allowed-tools:
 
 把命中文件列出来（chat 里显示数量与示例 3–5 个文件名，避免刷屏）。**不调用任何 git 命令**——不读 HEAD、不比 diff、不依赖分支。
 
+### Step 2.5 — 根级工程文件齐全性（`[S-root-files]`）
+
+> 唯一一项**不在 `src/` 内**的检查。`src/` 源码全合规、但根目录缺 `.gitignore` 仍是工程硬伤（`node_modules` 会被误提交），所以单列一步兜底。这里只查**存在性**，不审文件内容。
+
+`vue-scaffold-app` Step 3 规定的必备根文件（权威清单以 `vue-scaffold-app/SKILL.md` Step 3 为准），用 `Glob` 在工程根逐个核对是否存在：
+
+| 根文件 | 缺失级别 | 说明 |
+|---|---|---|
+| `.gitignore` | 🔴 严重 | 缺失会导致 `node_modules` / `dist` / `.env` 被误提交 |
+| `.gitattributes` | 🟡 警告 | 跨平台换行符规范；混合 OS 团队缺失会全行 diff |
+| `package.json` | 🔴 严重 | 工程根必备 |
+| `tsconfig.json` / `tsconfig.app.json` / `tsconfig.node.json` | 🟡 警告 | 缺任一即告警 |
+| `vite.config.ts` | 🔴 严重 | 构建入口 |
+| `uno.config.ts` | 🟡 警告 | 主题与 shortcuts |
+| `index.html` | 🟡 警告 | Vite 入口 HTML |
+
+本步只校验存在性，内容合规由生成 skill 负责。
+
 ### Step 3 — 第一层：机械 grep（A1–A14）
 
 按 `references/grep-patterns.md` 的清单逐条跑 `Grep`。每条规则带：
@@ -183,8 +201,8 @@ L1–L8 多数可机械 grep，少数需 Read 判断。按下表执行（具体�
 
 | 级别 | 含义 | 包含规则 |
 |---|---|---|
-| 🔴 严重 | 反模式 / 不可违背 | A1–A12、R1 / R3 / R4 / R5 / R9 / R10 / R11、`[S-utils-barrel]`、`[S-views-root]`、`[M14]`（composable 形态后缀命名）、`[L2]`（Main.vue 改 overflow-auto）、`[L6]` |
-| 🟡 警告 | 结构 / 命名 / 强建议 | A13 / A14、R2 / R8 / R13 / R14、`[S-utils-naming]`、`[S-module-quartet]`、`[S-menu-dir-namespace]`、`[S-system-views-split]`、`[M12]` / `[M15]` / `[M16]`、`[L1]` / `[L3]` / `[L4]` / `[L5]` / `[L7]` / `[L8]` |
+| 🔴 严重 | 反模式 / 不可违背 | A1–A12、R1 / R3 / R4 / R5 / R9 / R10 / R11、`[S-utils-barrel]`、`[S-views-root]`、`[S-root-files]`（缺 `.gitignore` / `package.json` / `vite.config.ts`）、`[M14]`（composable 形态后缀命名）、`[L2]`（Main.vue 改 overflow-auto）、`[L6]` |
+| 🟡 警告 | 结构 / 命名 / 强建议 | A13 / A14、R2 / R8 / R13 / R14、`[S-utils-naming]`、`[S-module-quartet]`、`[S-menu-dir-namespace]`、`[S-system-views-split]`、`[S-root-files]`（缺 `.gitattributes` / `tsconfig*` / `uno.config.ts` / `index.html`）、`[M12]` / `[M15]` / `[M16]`、`[L1]` / `[L3]` / `[L4]` / `[L5]` / `[L7]` / `[L8]` |
 | 🟢 建议 | 风格 / 取舍 | R7、R12、`[L2]`（sticky-container 疑似滥用） |
 
 > M1–M11 / M13 与 R/A/S/L 系列存在交叠（如 M7≈R3、M8≈R8、M11≈L6、M13≈R7），报告中**优先引用 R/A/S/L 编号**，M 编号只用于上面列出的模块专属规则（M12 / M14 / M15 / M16），避免同一违规挂两个编号。

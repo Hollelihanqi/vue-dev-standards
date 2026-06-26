@@ -33,6 +33,7 @@ Vue 3.5+(`<script setup>`,禁用 Options API)· TypeScript · Vite · Element Pl
 - 详情页/表单页根节点带 `bg-white rounded-2 p-6`;列表页不用(pro-table 自带圆角白底)。
 - 弹层(Dialog/Drawer)挂在 **`view-w` 同级**(多根节点),不要嵌进根 `<div>`。
 - 左侧菜单由路由派生(`buildMenuTree`),不硬编码;收起态 `w-16`。
+- 业务页一律用 `<div>`,**禁用** `section`/`main`/`header`/`footer`/`nav`/`aside`/`article`;这些标签仅限 layout 外壳。文本级标签(`h1~h6`/`p`/`b`/`span` 等)不限。
 
 ## 业务模块(加页面时的结构)
 
