@@ -1,0 +1,7 @@
+interface:
+  display_name: "需求落地方案文档"
+  short_description: "先理解需求再出零模糊可落地的改造方案文档"
+  default_prompt: "Use $feature-plan-doc to first understand the requirement (trace the call chain with file:line, confirm design forks), then produce a fully actionable Markdown plan doc with Chinese filename under docs/."
+
+policy:
+  allow_implicit_invocation: true

@@ -18,6 +18,8 @@ Vue 3 中后台门户工程前端开发标准，集中维护 Claude Code 和 Cod
 | `vue-scaffold-review` | `/vue-scaffold-review` | 按 vue-scaffold-app 规范对工程做合规审查，输出违规清单到 docs/code-review/ |
 | `daily-work-report` | `/daily-work-report` | 生成和维护中文日报、周报与日报缓存 |
 | `ui-test` | `/ui-test` | 对前端工程做 UI 自动化测试，覆盖所有按钮、表单、校验 |
+| `feature-plan-doc` | `/feature-plan-doc` | 先理解需求（file:line 链路 + 选择题确认）再出零模糊、可直接落地的 Markdown 改造方案文档 |
+| `feature-plan-review` | `/feature-plan-review` | 拿方案文档当标尺审核别的 AI 的落地改动；不写文件，直接输出可整段复制给落地 AI 的修正指令 |
 
 ---
 

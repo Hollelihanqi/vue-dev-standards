@@ -1,0 +1,7 @@
+interface:
+  display_name: "落地审核·对照方案"
+  short_description: "拿方案文档审落地改动，直接输出可粘贴给落地 AI 的修正指令"
+  default_prompt: "Use $feature-plan-review to audit the current git changes against the feature-plan-doc plan document, and print a copy-paste-ready correction prompt for the implementing AI. Read-only: write no files, change no code."
+
+policy:
+  allow_implicit_invocation: true
