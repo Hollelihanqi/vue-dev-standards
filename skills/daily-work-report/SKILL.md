@@ -34,12 +34,12 @@ allowed-tools:
    - 如果项目名不明显，再看 `package.json` 里的 `name`。
 
 2. 收集当天已完成或已验证的工作项。
-   - 优先使用本次会话内可观测到的事实：
-     - 已应用的文件编辑（Edit / Write 工具产生的改动）
-     - 用户给出的明确确认或反馈
-     - 执行成功的命令输出
-   - 必要时调用 `git log --since=midnight --pretty=oneline`（或等价 PowerShell 命令）补充未在会话中提及的提交，仅作为参考来源，仍按下方 Git 噪音过滤规则筛选。
-   - 默认排除纯环境噪音、临时调试、一次性试错和无沉淀价值内容，除非用户明确要求保留。
+   - **默认以当天当前作者的全部 git 提交为主要来源**：先跑
+     `git log --author="$(git config user.name)" --since=midnight --no-merges --pretty=format:'%h %s' --stat`
+     列出当天当前用户的所有非 merge 提交，再逐个用 `git show <hash>`（关键文件可 `git show <hash> -- <file>`）查看**实际 diff** 归纳工作项。
+   - **commit message 不可信时必须看 diff**：很多提交信息很笼统（如 `style: 样式修复`、`chore: xxx`），只看 message 或只看文件名会漏项或误判，必须看真实 diff 判断这到底改了什么。
+   - 用户的大部分提交发生在本次 Claude 会话之外（IDE / Codex / 其他会话），因此**不要只依赖本次会话内的 Edit/Write 记录**；会话内可观测到的事实（文件编辑、用户确认、命令输出）仅作为补充与交叉校验。
+   - 仍按下方「日报过滤补充规则」筛选：默认排除 merge、纯环境噪音、临时调试、一次性试错和无沉淀价值内容，除非用户明确要求保留。
 
 3. 读取缓存并合并当天其他项目内容。
    - 同一天多个项目的日报需要一起输出。
