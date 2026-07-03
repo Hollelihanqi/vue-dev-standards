@@ -44,7 +44,7 @@ allowed-tools:
 ## 六条强制规则（均带真实参数）
 
 > **规则编号（供 `vue-scaffold-review` 引用）**：
-> `L1` layout-main padding · `L2` 撑满不溢出 / sticky-container 慎用 · `L3` 不准半截（白底 + 按需圆角）· `L4` 菜单宽度（展开自定 / 收起 w-16）· `L5` 操作列用 width · `L6` view 根节点挂 view-w · `L7` 菜单由路由派生（与面包屑同源）· `L8` 外壳组件职责边界（Layout 只装配 / TheSidebar 拥有侧栏 / TheMenu 只管菜单）。
+> `L1` layout-main padding · `L2` 撑满不溢出 / hd-sticky-container 慎用 · `L3` 不准半截（白底 + 按需圆角）· `L4` 菜单宽度（展开自定 / 收起 w-16）· `L5` 操作列用 width · `L6` view 根节点挂 view-w · `L7` 菜单由路由派生（与面包屑同源）· `L8` 外壳组件职责边界（Layout 只装配 / TheSidebar 拥有侧栏 / TheMenu 只管菜单）。
 
 ### 规则 L1 · layout-main 的 padding 是 `p-4 md:px-5`
 
@@ -71,68 +71,68 @@ allowed-tools:
 
 - 默认情况下，**list 页的列表区、detail 页的内容区都自动占满剩余高度**——靠的就是上面那条 `h-full` 高度链，view 根节点挂 `h-full` 即可继承。
 - `layout-main` 必须是 `overflow-hidden`，**绝不允许改成 `overflow-auto` 让外壳自己滚动**（那会出现整页滚动 + header 跟着滚的坏体验）。
-- **默认就应该让内容在一屏内放下**——list 页内部滚动由 `pro-table` 自己处理；detail / 表单页优先靠精简字段、分区、合理留白把内容塞进剩余高度，而不是让它溢出。
+- **默认就应该让内容在一屏内放下**——list 页内部滚动由 `<hd-pro-table>` 自己处理；detail / 表单页优先靠精简字段、分区、合理留白把内容塞进剩余高度，而不是让它溢出。
 
-#### `sticky-container` —— 内容超长时的滚动容器
+#### `hd-sticky-container` —— 内容超长时的滚动容器
 
-- `sticky-container` 是详情 / 表单页内容**确实超长、无法精简进一屏时**的滚动容器。优先把内容精简 / 分区到一屏内；真要滚动才用它。
-- **判断标准**：页面**最后一个模块若高度自适应**（用 `flex-1` 吃掉剩余高度），整页就能在一屏内放下，**不需要 `sticky-container`**——根节点 `view-w h-full` + 内容 `flex h-full flex-col`，最后一块挂 `flex-1` 即可撑满。只有最后一块也无法自适应、内容确实溢出时，才用 `sticky-container`。
-- 违规写法：给 view 根节点或 `layout-main` 直接挂 `overflow-auto` / `overflow-y-scroll` 凑合滚动。要滚动就用 `sticky-container`。
+- `<hd-sticky-container>` 是详情 / 表单页内容**确实超长、无法精简进一屏时**的滚动容器。优先把内容精简 / 分区到一屏内；真要滚动才用它。
+- **判断标准**：页面**最后一个模块若高度自适应**（用 `flex-1` 吃掉剩余高度），整页就能在一屏内放下，**不需要 `<hd-sticky-container>`**——根节点 `view-w h-full` + 内容 `flex h-full flex-col`，最后一块挂 `flex-1` 即可撑满。只有最后一块也无法自适应、内容确实溢出时，才用它。
+- 违规写法：给 view 根节点或 `layout-main` 直接挂 `overflow-auto` / `overflow-y-scroll` 凑合滚动。要滚动就用 `<hd-sticky-container>`。
 
-#### pro-table 的高度契约（list 页能否自滚的关键，照抄勿简化）
+#### hd-pro-table 的高度契约（list 页能否自滚的关键，照抄勿简化）
 
-「list 页内部滚动由 pro-table 自己处理」能成立，**前提是 pro-table 组件自身实现了高度自适应**。标准实现（见 `vue-scaffold-base-components` 的 `ProTable.vue`、标准工程 `src/components/pro-table/ProTable.vue`）就是这套结构：
+「list 页内部滚动由 hd-pro-table 自己处理」能成立，**前提是 hd-pro-table 自身实现了高度自适应**。`@rdeam/hd-ui` 的标准实现就是这套结构：
 
 ```vue
-<!-- pro-table 根：撑满父级 + 纵向 flex + overflow-hidden -->
+<!-- hd-pro-table 根：撑满父级 + 纵向 flex + overflow-hidden -->
 <div class="pro-table-w h-[100%] w-[100%] flex flex-col overflow-hidden gap-2">
-  <search-form ... />                                  <!-- 查询区：自然高度 -->
+  <hd-search-form ... />                              <!-- 查询区：自然高度 -->
   <div class="ptable-box flex-1 h-0 p-[16px] bg-white"> <!-- 表体区：flex-1 h-0 吃掉剩余高度 + 自带白底 -->
-    <HTable ... />                                      <!-- 表格在此容器内部滚动 -->
+    <hd-table ... />                                  <!-- 表格在此容器内部滚动 -->
   </div>
 </div>
 ```
 
-- **撑高统一用 `flex-1 h-0`，不要用 `min-h-0`**：`flex-1` 吃掉剩余高度、`h-0` 让其可收缩到内容以下从而内部滚动。这是本规范全站统一写法（`sticky-container` 的 `flex-1 h-0`、`table` 组件同理）。
-- pro-table **自带白底**（`ptable-box bg-white`）：list 页 view 根节点只写 `view-w h-full w-full`，**不要**再包灰底容器、也不要手写 `bg-white`。
-- view 根节点的 `h-full` 是喂给 pro-table 的**唯一高度来源**——pro-table 是 `h-[100%]`，缺了这层 `h-full` 它会塌成 0。
+- **撑高统一用 `flex-1 h-0`，不要用 `min-h-0`**：`flex-1` 吃掉剩余高度、`h-0` 让其可收缩到内容以下从而内部滚动。全站统一（`<hd-sticky-container>`、`<hd-table>` 同理）。
+- hd-pro-table **自带白底**（`ptable-box bg-white`）：list 页 view 根节点只写 `view-w h-full w-full`，**不要**再包灰底容器、也不要手写 `bg-white`。
+- view 根节点的 `h-full` 是喂给 hd-pro-table 的**唯一高度来源**——它是 `h-[100%]`，缺了这层 `h-full` 会塌成 0。
 
-> ⚠️ **list 页被裁 / 不滚，根因只会是 pro-table 组件本身没按上面的高度契约实现**（例如工程里塞了一个去掉高度的简化版）。修复方式是**换回标准 pro-table**（从内部组件包 / `vue-scaffold-base-components` 取），**绝不是**在调用方打补丁——给业务页或 `layout-main` 套 `overflow-auto`、给 list 页手加滚动容器都是错的，会掩盖组件缺陷并破坏 L2。
+> ⚠️ **list 页被裁 / 不滚，根因只会是组件没按上面的高度契约实现**。修复方式是**用标准 `<hd-pro-table>`**（`@rdeam/hd-ui`），**绝不是**在调用方打补丁——给业务页或 `layout-main` 套 `overflow-auto`、给 list 页手加滚动容器都是错的，会掩盖组件缺陷并破坏 L2。
 
-#### pro-table vs HTable —— 选型边界（必须分清）
+#### hd-pro-table vs hd-table —— 选型边界（必须分清）
 
 两者功能不同，按场景选，业务页一律**不准裸用 `<el-table>`**：
 
 | 场景 | 用哪个 | 说明 |
 |---|---|---|
-| 标准 CRUD **列表页**（有查询表单 + 分页） | `pro-table` | = `search-form` + `HTable` 组合，自带查询/重置联动、白底卡片、`flex-1 h-0` 高度自适应（满足 L2/L3） |
-| 只要表格、**无查询表单**（详情页子表、弹窗内表格、无查询的简单表） | `HTable`（`<Table>`） | 纯表格：列配置 / 排序 / 分页 / 合计行 / 多级表头 / 空状态，可传 `request-api` 自拉或直接喂 `data`，不含查询表单 |
-| 原生 `<el-table>` | ❌ 禁止 | 缺特性应去扩展 `HTable`，不在业务页裸用（见 `[A14]`） |
+| 标准 CRUD **列表页**（有查询表单 + 分页） | `<hd-pro-table>` | = `<hd-search-form>` + `<hd-table>` 组合，自带查询/重置联动、白底卡片、`flex-1 h-0` 高度自适应（满足 L2/L3） |
+| 只要表格、**无查询表单**（详情页子表、弹窗内表格、无查询的简单表） | `<hd-table>` | 纯表格：列配置 / 排序 / 分页 / 合计行 / 多级表头 / 空状态，可传 `request-api` 自拉或直接喂 `data`，不含查询表单 |
+| 原生 `<el-table>` | ❌ 禁止 | 缺特性应去扩展 `<hd-table>`，不在业务页裸用（见 `[A14]`） |
 
-- **判据**：页面要不要顶部查询表单——要 → `pro-table`；不要 → `HTable`。
-- `pro-table` 已包含 `HTable`，二者不叠用（别在 `pro-table` 外再套 `HTable`）。
+- **判据**：页面要不要顶部查询表单——要 → `<hd-pro-table>`；不要 → `<hd-table>`。
+- `<hd-pro-table>` 已包含 `<hd-table>`，二者不叠用（别在 `<hd-pro-table>` 外再套 `<hd-table>`）。
 
-### 规则 L3 · 任何页面都不能"半截"——view 自带白底（列表页不需要圆角，pro-table 已自带）
+### 规则 L3 · 任何页面都不能"半截"——view 自带白底（列表页不需要圆角，hd-pro-table 已自带）
 
 "半截" = view 没铺满白色卡片，底部背景色透出来。**每个 view 根节点必须 `h-full` 撑满**，白底和圆角按类型处理：
 
 | 页面类型           | view 根节点写法                                                                             | 白底来源                                                                         |
 | ------------------ | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| **增删改查列表页** | `<div class="view-w h-full w-full">` 内直接放 `<pro-table>`                                 | **pro-table 自带卡片**，无需手写白底——保持标准列表态即可（见下方"列表页标准态"） |
+| **增删改查列表页** | `<div class="view-w h-full w-full">` 内直接放 `<hd-pro-table>`                              | **hd-pro-table 自带卡片**，无需手写白底——保持标准列表态即可（见下方"列表页标准态"） |
 | **详情页**         | `<div class="view-w h-full flex flex-col bg-white rounded-2 p-6 gap-6">`                    | 根节点自身 `bg-white rounded-2`                                                  |
 | **表单 / 资料页**  | `<div class="view-w h-full w-full">` 内放 `<el-card class="page-fill-card" shadow="never">` | `page-fill-card` 撑满的卡片                                                      |
 
-**列表页标准态**：只要根节点 `view-w h-full` + 直接用 `pro-table`，就是合规的，不会"半截"。不要在 pro-table 外再套自定义灰底容器。
+**列表页标准态**：只要根节点 `view-w h-full` + 直接用 `<hd-pro-table>`，就是合规的，不会"半截"。不要在 hd-pro-table 外再套自定义灰底容器。
 
-> **列表页标准结构**：根节点 `view-w h-full w-full` 下只放一个 `pro-table`；查询区用 `:form-controls` 传入，"新增"等按钮放 `pro-table` 的 `#tableHeader` 插槽，弹层挂在 `view-w` 同级（template 多根）。
+> **列表页标准结构**：根节点 `view-w h-full w-full` 下只放一个 `<hd-pro-table>`；查询区用 `:form-controls` 传入，"新增"等按钮放 `#tableHeader` 插槽，弹层挂在 `view-w` 同级（template 多根）。
 >
 > ```vue
 > <div class="view-w h-full w-full">
->   <pro-table :columns="columns" :form-controls="searchFormList" :request-api="requestTableData">
+>   <hd-pro-table :columns="columns" :form-controls="searchFormList" :request-api="requestTableData">
 >     <template #tableHeader>
 >       <el-button type="primary" @click="handleCreate">创建项目</el-button>
 >     </template>
->   </pro-table>
+>   </hd-pro-table>
 > </div>
 > <XxxCreate v-model="createDialogVisible" />
 > ```
@@ -172,7 +172,7 @@ allowed-tools:
 <template>
   <div class="view-w h-full w-full">
     <!-- ✅ 根节点 view-w + h-full -->
-    <pro-table ... />
+    <hd-pro-table ... />
   </div>
 
   <!-- 弹层组件挂在 view-w 同级，不嵌进根 div（见 vue-scaffold-module 规则）；文件名不带 Dialog / Drawer 后缀 -->
@@ -230,9 +230,9 @@ TheMenu.vue       只含 el-menu + 递归 TheMenuItem，不含品牌 / 页脚
 起新页面 / review 时逐条过：
 
 - [ ] view 根节点挂了 `view-w` 且带 `h-full`
-- [ ] 列表页：`view-w h-full` 内直接 `pro-table`，没套多余灰底容器
-- [ ] 详情页 / 表单页：根节点带 `bg-white rounded-2 p-6`，铺满无"半截"；列表页只挂 `view-w h-full`，圆角由 pro-table 自带
-- [ ] 页面内无 `overflow-auto`/`overflow-y-scroll` 凑合滚动；内容超长需滚动时用 `sticky-container`
+- [ ] 列表页：`view-w h-full` 内直接 `<hd-pro-table>`，没套多余灰底容器
+- [ ] 详情页 / 表单页：根节点带 `bg-white rounded-2 p-6`，铺满无"半截"；列表页只挂 `view-w h-full`，圆角由 hd-pro-table 自带
+- [ ] 页面内无 `overflow-auto`/`overflow-y-scroll` 凑合滚动；内容超长需滚动时用 `<hd-sticky-container>`
 - [ ] 没有改动外壳 `layout-main` 的 `overflow-hidden` / `p-4 md:px-5`
 - [ ] 菜单有展开/收起两态，收起 `w-16` 只剩图标（展开宽度自定，不限具体值）
 - [ ] 表格操作列用 `width` 不用 `minWidth`，`fixed: 'right'`

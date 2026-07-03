@@ -159,8 +159,8 @@ L1–L8 多数可机械 grep，少数需 Read 判断。按下表执行（具体�
 | 规则 | 检测手段 | 命中即违规的信号 |
 |---|---|---|
 | `[L1]` layout-main padding | Read `src/layout/Main.vue` | `layout-main` 那行不是 `flex-1 overflow-hidden p-4 md:px-5` |
-| `[L2]` 禁止溢出 / sticky 慎用 | Grep `overflow-auto\|overflow-y-scroll`（限 `src/layout/Main.vue` 与各 `views/**/*.vue` 根节点）；Grep `StickyContainer\|sticky-container`（用量统计） | Main.vue 出现 `overflow-auto`；或 view 根节点直接挂 `overflow-auto/scroll` 凑合滚动；或 `sticky-container` 被大面积套用（逐个 Read 确认是否真有超长内容，疑似滥用则 🟢 提示） |
-| `[L3]` 不准半截 | Read `views/**/*.vue` 根节点 | 详情/表单页根节点既无 `pro-table`、又无 `bg-white`/`page-fill-card`，且无 `h-full`（灰底会透出来） |
+| `[L2]` 禁止溢出 / sticky 慎用 | Grep `overflow-auto\|overflow-y-scroll`（限 `src/layout/Main.vue` 与各 `views/**/*.vue` 根节点）；Grep `hd-sticky-container`（用量统计） | Main.vue 出现 `overflow-auto`；或 view 根节点直接挂 `overflow-auto/scroll` 凑合滚动；或 `<hd-sticky-container>` 被大面积套用（逐个 Read 确认是否真有超长内容，疑似滥用则 🟢 提示） |
+| `[L3]` 不准半截 | Read `views/**/*.vue` 根节点 | 详情/表单页根节点既无 `<hd-pro-table>`、又无 `bg-white`/`page-fill-card`，且无 `h-full`（灰底会透出来） |
 | `[L4]` 菜单收起态 | Read `src/layout/TheSidebar.vue`（不存在则 `Layout.vue`） | 无展开/收起两态，或收起态不是 `w-16`（只剩图标）；展开宽度不限具体值，不命中 |
 | `[L5]` 操作列用 width | Grep `label: ['\"]操作` 定位 `constants.tsx`，Read 该列 | 操作列（`fixed: 'right'`）用了 `minWidth` 而非 `width` |
 | `[L6]` view 根节点挂 view-w | Glob `src/views/**/*.vue`（独立路由页），Read 根节点首个 `<div>` | 根节点缺 `view-w`，或用自定义 class 替代 |
@@ -203,7 +203,7 @@ L1–L8 多数可机械 grep，少数需 Read 判断。按下表执行（具体�
 |---|---|---|
 | 🔴 严重 | 反模式 / 不可违背 | A1–A12、R1 / R3 / R4 / R5 / R9 / R10 / R11、`[S-utils-barrel]`、`[S-views-root]`、`[S-root-files]`（缺 `.gitignore` / `package.json` / `vite.config.ts`）、`[M14]`（composable 形态后缀命名）、`[L2]`（Main.vue 改 overflow-auto）、`[L6]` |
 | 🟡 警告 | 结构 / 命名 / 强建议 | A13 / A14、R2 / R8 / R13 / R14、`[S-utils-naming]`、`[S-module-quartet]`、`[S-menu-dir-namespace]`、`[S-system-views-split]`、`[S-root-files]`（缺 `.gitattributes` / `tsconfig*` / `uno.config.ts` / `index.html`）、`[M12]` / `[M15]` / `[M16]`、`[L1]` / `[L3]` / `[L4]` / `[L5]` / `[L7]` / `[L8]` |
-| 🟢 建议 | 风格 / 取舍 | R7、R12、`[L2]`（sticky-container 疑似滥用） |
+| 🟢 建议 | 风格 / 取舍 | R7、R12、`[L2]`（`<hd-sticky-container>` 疑似滥用） |
 
 > M1–M11 / M13 与 R/A/S/L 系列存在交叠（如 M7≈R3、M8≈R8、M11≈L6、M13≈R7），报告中**优先引用 R/A/S/L 编号**，M 编号只用于上面列出的模块专属规则（M12 / M14 / M15 / M16），避免同一违规挂两个编号。
 

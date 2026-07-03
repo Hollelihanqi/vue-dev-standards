@@ -31,7 +31,7 @@ allowed-tools:
 | 子 skill                       | 何时调用                                                                        | 单独触发场景                                                       |
 | ------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `vue-scaffold-layout`          | 写 `Layout.vue` / `Main.vue` 及任意 view 页面时（布局类名与高度契约的权威来源） | "页面有半截 / 不撑满 / 滚动条不对"、"菜单多宽"、"操作列宽度怎么写" |
-| `vue-scaffold-base-components` | 主流程 Step 7（没有内部 npm 包时）                                              | 老项目里"把 6 个基础组件拷过来"                                    |
+| `vue-scaffold-hd-ui`           | 主流程 Step 7（基础组件库接入）                                                            | "装基础组件"、"配 HdCustomResolver"                              |
 | `vue-scaffold-module`          | 主流程 Step 8（添加第一个业务模块）                                             | 老项目里"加一个 xx 列表 / 详情页"                                  |
 | `vue-scaffold-component`       | 业务下拉 / 状态字典需要复用时                                                   | 老项目里"封装一个 xx 选择器"                                       |
 
@@ -60,9 +60,10 @@ allowed-tools:
 | 路由         | vue-router 5.x（Vue 3 对应的 5.x 版本）                     |                                                                                                                                                                                 |
 | 状态         | pinia 3 + pinia-plugin-persistedstate                       |                                                                                                                                                                                 |
 | UI           | Element Plus 2.13+ + `@element-plus/icons-vue`              | 组件靠 `ElementPlusResolver` auto-import，CSS 由 theme builder 一次性生成 `assets/generated/element-plus-theme.css`，**禁止 `import 'element-plus/dist/index.css'` 等全量引入** |
+| 基础组件库   | `@rdeam/hd-ui`                                              | 增强表格 / 容器 / 远程下拉 / 文本省略等基础组件统一来自此包，经 `HdCustomResolver`（`@rdeam/hd-ui/resolvers`）按需注册，模板写 `<hd-xxx />` |
 | 主题         | `@rdeam/vite-plugin-element-plus-theme-builder`             | 主色由 vite 插件编译产出                                                                                                                                                        |
 | 原子 CSS     | UnoCSS（presetWind3 + presetAttributify + presetIcons）     | 默认风格首选                                                                                                                                                                    |
-| 组件自动注册 | `@rdeam/vue-components-resolver` 的 `AppComponentsResolver` | 只扫 `src/components` 顶层                                                                                                                                                      |
+| 组件自动注册 | `@rdeam/vue-components-resolver` 的 `AppComponentsResolver` | 只扫 `src/components` 顶层                                                                                                                                                    |
 | 自动导入 API | `unplugin-auto-import`（vue / vue-router / pinia）          | 业务文件不用手写 `import { ref }` 等                                                                                                                                            |
 | HTTP         | axios                                                       | 统一拦截器，业务层不判 code                                                                                                                                                     |
 | 工具集       | @vueuse/core                                                |                                                                                                                                                                                 |
@@ -88,8 +89,7 @@ allowed-tools:
     ├── assets/
     │   ├── generated/        # 由 ep 主题插件生成的 css，禁止手改
     │   └── styles/           # 全局 reset / 基础样式
-    ├── components/           # 通用基础组件（pro-table / search-form / remote-search / sticky-container / text-ellipsis / table 等）
-    │                         # 靠 AppComponentsResolver 自动注册，template 直接用 <pro-table />，不需 import
+    ├── components/           # BaseX 本地展示组件，靠 AppComponentsResolver 自动注册
     ├── custom-components/    # 业务封装组件（远程下拉、状态 select、字典 select 等二次封装）
     │                         # 不自动注册，使用时显式 import from '@/custom-components/xxx'
     ├── directives/           # 自定义指令
@@ -148,7 +148,7 @@ allowed-tools:
 3. **[R3] ref over reactive**：所有响应式数据用 `ref()`。`reactive` 只允许在极少数确实需要 deep 引用的场景使用（默认拒绝）。
 4. **[R4] 加密集中**：RSA 公钥 / 分段算法 / 调用入口全部在 `utils/crypto.ts`；公钥从 `.env` 注入；其它文件不允许 `new JSEncrypt()`。
 5. **[R5] .env 收口**：应用标题、API 基址、超时、公钥、外部资源 URL 等所有可配置项都进 `.env`，禁止硬编码。
-6. **[R6] components vs custom-components**：通用原子组件（表格 / 搜索表单 / 远程下拉等）放 `src/components/`，由 `AppComponentsResolver` 自动注册，template 直接使用；业务封装（特定接口 / 特定字典 / 内置过滤）放 `src/custom-components/`，使用时显式 import。
+6. **[R6] components vs custom-components vs hd-ui**：基础组件（表格 / 搜索表单 / 远程下拉 / 吸顶容器 / 文本省略 / JSON 查看器等）**一律来自 `@rdeam/hd-ui`**，`HdCustomResolver` 自动注册；`src/components/` 只放 BaseX 本地展示组件；业务封装（特定接口 / 特定字典 / 内置过滤）放 `src/custom-components/`，使用时显式 import。
 7. **[R7] UnoCSS 优先**：能用原子类完成的样式都用原子类（含 `!important` 前缀 `!h-[42px]`、伪类 `hover:!bg-white/10`、属性选择器 `[&_span]:!text-white` 等）。`<style scoped>` 只写**必须**用到的 element-plus 深度覆盖（`:deep(.el-input__wrapper)` 等）；禁止用 SCSS 实现可以用原子类解决的事。
 8. **[R8] 路由 meta.title 直接中文**：除非项目启用 i18n，否则 `meta.title` 直接写中文字符串（如 `'角色管理'`），不要填 i18n 的 key。页面标题和面包屑都从 `meta.title` 取，不再额外维护映射。
 9. **[R9] API 文件返回 T 不返回 AxiosResponse**：`request.post<UserInfo>(url)` 返回 `Promise<UserInfo>`。业务层 `const data = await getXxx()` 拿到的就是数据本身。这是拦截器收口的必然推论。
@@ -175,7 +175,8 @@ allowed-tools:
 - ❌ **[A11] store 里手动调 `localStorage.setItem(KEY, value)` / `localStorage.getItem(KEY)` / `localStorage.clear()`** —— 一律用 `defineStore(..., { persist: { pick: [...] } })` 走插件；退出清登录态用 in-memory state 重置，让 persistedstate 自动同步，不要 `localStorage.clear()` 误伤偏好
 - ❌ **[A12]** `import 'element-plus/dist/index.css'` / `import 'element-plus/theme-chalk/**.css'` —— 全量引入 element-plus CSS。规范用 `unplugin-vue-components` 的 `ElementPlusResolver` 按需自动 import 组件，CSS 由 `@rdeam/vite-plugin-element-plus-theme-builder` 编译成 `src/assets/generated/element-plus-theme.css`，在 `main.ts` 单次 import 即可。**业务文件任何位置都不应该 import element-plus 的 CSS**
 - ❌ **[A13]** 建纯转发桶文件 `index.ts`（里面只有 `export * from './xxx'`） —— 有实现逻辑的 `index.ts` 可以，纯转发的不要
-- ❌ **[A14]** 业务页裸用 `<el-table>` —— 列表页（有查询表单）用 `pro-table`，无查询表单的表格用 `HTable`（`<Table>`）；缺特性去扩展 `HTable`，不在业务页裸用。选型边界见 `vue-scaffold-layout` L2 的「pro-table vs HTable」
+- ❌ **[A14]** 业务页裸用 `<el-table>` —— 列表页（有查询表单）用 `<hd-pro-table>`，无查询表单的表格用 `<hd-table>`；缺特性去扩展 `<hd-table>`，不在业务页裸用。选型边界见 `vue-scaffold-layout` L2 的「hd-pro-table vs hd-table」
+- ❌ **[A15]** 把 hd-ui 已有的基础组件源码放进 `src/components/`。
 
 ## 执行流程（从 `pnpm create vite` 到可运行的 hello world 业务页）
 
@@ -273,29 +274,20 @@ mkdir -p src/{api,assets/styles,assets/generated,components,custom-components,di
 - 整个 Layout 主框架
 - 登录 / 注册 / 重置密码三套 system-views（含 useLogin / useRegister 等 composable）
 
-### Step 7 — 写 components（通用基础组件）
+### Step 7 — 接入基础组件库（@rdeam/hd-ui）
 
-`src/components/` 下放置工程通用的基础组件，本 skill 规定的目录结构与职责如下：
+基础组件（增强表格 / 查询表单 / 远程下拉 / 吸顶容器 / 文本省略 / JSON 查看器 / 基础 table 等）**统一来自 `@rdeam/hd-ui`**。`src/components/` 只放 BaseX 本地展示组件。
 
 ```
 src/components/
-├── pro-table/           # 增强表格（分页 + 查询区集成 + 列配置 + 操作列）
-├── search-form/         # 查询表单（field+label+el 配置驱动，支持 render）
-├── remote-search/       # 远程下拉（url/labelKey/valueKey/dataCallback）
-├── sticky-container/    # 吸顶吸底容器（#header / #footer slot + 中间滚动）
-├── text-ellipsis/       # 文本省略 + tooltip
-└── table/               # 基础 table（el-table 二次封装）
+└── Base*.vue           # BaseX 本地展示组件
 ```
 
-导入路径统一用 `@/components/...`，通过 `AppComponentsResolver` 自动注册，模板里直接写 `<pro-table />`、`<search-form />` 等，不需要手动 import。
+可用标签（`<hd-pro-table>` / `<hd-table>` / `<hd-sticky-container>` 等，模板直接写、自动注册）见 `vue-scaffold-hd-ui` 的标签速查表。
 
-**组件代码获取方式（按推荐顺序）：**
+**落地方式：** 触发 `/vue-scaffold-hd-ui` 子 skill——装依赖、在 `vite.config.ts` 接 `HdCustomResolver`（`@rdeam/hd-ui/resolvers`）+ `element-plus-theme-builder`。
 
-1. **推荐**：使用内部 npm 包（如 `@<your-org>/vue-components`），`pnpm add` 后由 `AppComponentsResolver` 自动从包内解析，版本统一管理。
-2. **次选**：触发 `/vue-scaffold-base-components` 子 skill，把 6 个基础组件源码 + 配套 directive 自动拷进 `src/components/` 与 `src/directives/`。
-3. **过渡方案**：如果你的组织里已有同栈 Vue 3 + TS 项目实现了上述 6 个目录，可暂时复制源码过来——但**这是过渡方案**，最终目标是上面的内部包。
-
-⚠️ **这一步不能跳过** —— `pro-table` / `search-form` / `remote-search` 是业务模块（`vue-scaffold-module`）和业务组件（`vue-scaffold-component`）的依赖底座。新项目必须先把基础组件落位，再进入 Step 8。
+⚠️ **这一步不能跳过** —— `<hd-pro-table>` / `<hd-remote-search>` 是业务模块（`vue-scaffold-module`）和业务组件（`vue-scaffold-component`）的依赖底座。新项目必须先把 hd-ui 接好，再进入 Step 8。
 
 ### Step 8 — 添加第一个业务模块
 
@@ -306,7 +298,7 @@ src/views/example/
 ├── api.ts                  # request.post<T>(...) 调用，返回 Promise<T>
 ├── constants.tsx           # createXxxSearchForm() / createXxxColumns()
 ├── useExample.ts           # 业务逻辑（formModel ref / list 加载 / 提交 / 弹窗）
-├── ExampleList.vue         # <pro-table> + <search-form> + 调用 useExample()
+├── ExampleList.vue         # <hd-pro-table> + 调用 useExample()
 ├── ExampleCreate.vue       # 弹窗（如有）—— 文件名不带 Dialog / Drawer 后缀
 └── ExampleDetail.vue       # 详情页（如有）
 ```
@@ -334,7 +326,7 @@ pnpm dev
 1. `src/views/role/api.ts` —— 写 `getRoleList` / `createRole` / `updateRole` / `deleteRole`，全部 `request.post<T>(...)`
 2. `src/views/role/constants.tsx` —— 写 `createRoleSearchForm()` 和 `createRoleColumns({ onEdit, onDelete })`
 3. `src/views/role/useRole.ts` —— `useTemplateRef('tableRef')`、`searchFormList = computed(...)`、`columns = computed(...)`、`requestTableData` / `handleEdit` / `handleDelete` 等方法
-4. `src/views/role/RoleList.vue` —— 30 行内：`<pro-table />` + `<RoleEdit />` + 解构 `useRole()`
+4. `src/views/role/RoleList.vue` —— 30 行内：`<hd-pro-table />` + `<RoleEdit />` + 解构 `useRole()`
 5. 如有创建 / 编辑，新建 `RoleEdit.vue`（弹框 / 抽屉文件名**不带** `Dialog` / `Drawer` 后缀；独立 props `modelValue`，emit `update:modelValue` + `success`）
 6. `src/router/index.ts` 加路由：
    ```ts
@@ -348,7 +340,7 @@ pnpm dev
    }
    ```
 
-整个过程不应该超过 1 小时。如果超过了，多半是没有复用 `pro-table` / `useXxx` 模式，或者在 view 里写了一堆业务逻辑——回头检查。
+整个过程不应该超过 1 小时。如果超过了，多半是没有复用 `<hd-pro-table>` / `useXxx` 模式，或者在 view 里写了一堆业务逻辑——回头检查。
 
 ## 业务下拉 / 状态字典如何下沉为组件
 

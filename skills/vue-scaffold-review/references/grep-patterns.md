@@ -83,7 +83,7 @@
 
 - 正则：`<el-table[\s/>]`
 - 范围：`src/views/**/*.vue`（`components/` / `custom-components/` 默认排除，封装实现内部的 el-table 不误伤）
-- 修复：列表页（有查询表单）用 `pro-table`，无查询表单的表格用 `HTable`（`<Table>`）；缺特性去扩展 HTable，别在业务页裸用。选型边界见 `vue-scaffold-layout` L2 的「pro-table vs HTable」
+- 修复：列表页（有查询表单）用 `<hd-pro-table>`，无查询表单的表格用 `<hd-table>`；缺特性去扩展 `<hd-table>`，别在业务页裸用。选型边界见 `vue-scaffold-layout` L2 的「hd-pro-table vs hd-table」
 - 🟡 警告
 
 ---

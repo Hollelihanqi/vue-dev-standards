@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@rdeam/hd-ui": "^2.1.2",
     "@vueuse/core": "^14.2.1",
     "axios": "^1.15.0",
     "element-plus": "^2.13.7",
@@ -34,7 +35,7 @@
     "vue-router": "^5.0.4"
   },
   "devDependencies": {
-    "@rdeam/vite-plugin-element-plus-theme-builder": "^0.1.5",
+    "@rdeam/vite-plugin-element-plus-theme-builder": "^0.2.1",
     "@rdeam/vue-components-resolver": "^0.1.2",
     "@types/node": "^24.12.2",
     "@unocss/preset-attributify": "^66.6.8",
@@ -69,6 +70,7 @@ import UnoCSS from "unocss/vite";
 import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 import { AppComponentsResolver } from "@rdeam/vue-components-resolver";
+import { HdCustomResolver } from "@rdeam/hd-ui/resolvers";
 import { elementPlusThemeBuilder } from "@rdeam/vite-plugin-element-plus-theme-builder";
 
 export default defineConfig({
@@ -87,13 +89,17 @@ export default defineConfig({
         error: "<error-color>",
         info: "<info-color>",
       },
+      // head-prepend：让主题 CSS 排在业务样式（UnoCSS / scoped）之前，
+      // 业务样式后加载、稳定覆盖；否则 dev/打包样式表现不一致。
+      injectTo: "head-prepend",
     }),
     vue(),
     vueJsx(),
     UnoCSS(),
     AutoImport({
       imports: ["vue", "vue-router", "pinia"],
-      resolvers: [ElementPlusResolver()],
+      // importStyle:false：element-plus 样式统一由 theme-builder 提供，避免引入默认主题 css。
+      resolvers: [ElementPlusResolver({ importStyle: false })],
       dts: "src/types/auto-imports.d.ts",
     }),
     Components({
@@ -101,6 +107,9 @@ export default defineConfig({
       resolvers: [
         ElementPlusResolver({ importStyle: false }),
         AppComponentsResolver(),
+        // @rdeam/hd-ui 按需：<hd-xxx> 自动带入组件 + theme-chalk 样式。
+        // HdCustomResolver 必须从 '@rdeam/hd-ui/resolvers' 子路径引。
+        HdCustomResolver(),
       ],
       dts: "src/types/components.d.ts",
     }),
@@ -153,7 +162,8 @@ export default defineConfig({
 
 **注意**：
 
-- `dirs: []` 关闭默认目录扫描，由 `AppComponentsResolver` 接管
+- `dirs: []` 关闭默认目录扫描，由 `AppComponentsResolver` + `HdCustomResolver` 接管
+- `HdCustomResolver` 从 `@rdeam/hd-ui/resolvers` 引；基础组件用 hd-ui 版，模板写 `<hd-xxx />`
 - 代理路径前缀必须以 `/api/<service>` 开头（与 `.env.VITE_API_BASE_URL=/api` 对齐）
 - **代理 target 直接写在本文件里，禁止用 `VITE_PROXY_TARGET` 之类的 `.env` 变量 + `loadEnv` 注入**：dev 代理只在本地开发服务器生效、运行时读不到，放 `.env` 既无意义又会把内网后端地址打进前端产物
 - 多环境后端在 `vite.config.ts` 内按 `mode` 分支切换 target，不依赖 `.env.development` / `.env.production`

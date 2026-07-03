@@ -25,7 +25,7 @@ allowed-tools:
 ## 前置假设
 
 目标项目应已具备：
-1. `src/components/remote-search` 通用远程搜索组件（支持 `url` / `labelKey` / `valueKey` / `dataCallback` / `isRemoteSearch` 等 props）
+1. `@rdeam/hd-ui` 已接入，`HdRemoteSearch` 可用（`import { HdRemoteSearch } from '@rdeam/hd-ui'`；url 模式必须传 `requester`）
 2. `src/custom-components/` 目录存在（不存在则新建）
 3. 命名遵循 `<项目前缀><实体名>Select` 约定（示例：`<Prefix>ChainFrameworkSelect.tsx` / `<Prefix>StatusSelect.tsx`）
 
@@ -58,7 +58,8 @@ src/custom-components/<ComponentName>.tsx
 ```tsx
 import { h } from 'vue'
 
-import RemoteSearch from '@/components/remote-search'
+import { HdRemoteSearch } from '@rdeam/hd-ui'
+import { request } from '@/utils/request'
 
 interface <ComponentName>Props {
   modelValue?: string | number
@@ -67,10 +68,11 @@ interface <ComponentName>Props {
 }
 
 const <ComponentName> = (_props: <ComponentName>Props, context: any) => {
-  return h(RemoteSearch, {
+  return h(HdRemoteSearch, {
     isRemoteSearch: false,
     url: '<api-url>',
     method: '<http-method>',
+    requester: request,
     labelKey: '<label-key>',
     valueKey: '<value-key>',
     placeholder: '<placeholder>',
@@ -86,7 +88,8 @@ export default <ComponentName>
 ```tsx
 import { h } from 'vue'
 
-import RemoteSearch from '@/components/remote-search'
+import { HdRemoteSearch } from '@rdeam/hd-ui'
+import { request } from '@/utils/request'
 
 interface <ComponentName>Props {
   modelValue?: string | number
@@ -101,10 +104,11 @@ const defaultDataCallback = (list: any[]) => {
 }
 
 const <ComponentName> = (_props: <ComponentName>Props, context: any) => {
-  return h(RemoteSearch, {
+  return h(HdRemoteSearch, {
     isRemoteSearch: false,
     url: '<api-url>',
     method: '<http-method>',
+    requester: request,
     labelKey: '<label-key>',
     valueKey: '<value-key>',
     placeholder: '<placeholder>',
@@ -130,7 +134,8 @@ export default <ComponentName>
 ```tsx
 import { h } from 'vue'
 
-import RemoteSearch from '@/components/remote-search'
+import { HdRemoteSearch } from '@rdeam/hd-ui'
+import { request } from '@/utils/request'
 
 interface <ComponentName>Props {
   modelValue?: string | number
@@ -140,10 +145,11 @@ interface <ComponentName>Props {
 }
 
 const <ComponentName> = (props: <ComponentName>Props, context: any) => {
-  return h(RemoteSearch, {
+  return h(HdRemoteSearch, {
     isRemoteSearch: false,
     url: '<api-url>',
     method: 'POST',
+    requester: request,
     requestParams: { dictCode: props.dictCode },
     labelKey: '<label-field>',
     valueKey: '<value-field>',

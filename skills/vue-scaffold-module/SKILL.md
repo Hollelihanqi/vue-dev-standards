@@ -1,6 +1,6 @@
 ---
 name: vue-scaffold-module
-description: 在已有 Vue 3 + TS 中后台工程内，按 vue-scaffold-app 规范添加一个新的业务模块（列表 + 详情 + 弹窗）。当用户说"加一个 xx 列表页"、"在项目里新增 xx 模块"、"按模板加 xx 业务页"、"按本套规范加 xx 管理页"、"新增一个 crud 页面"等时使用。生成模块四件套（api.ts / constants.tsx / use<Module>.ts / <Module>List.vue），自动接入 router、复用 pro-table / search-form，业务码统一走 axios 拦截器。
+description: 在已有 Vue 3 + TS 中后台工程内，按 vue-scaffold-app 规范添加一个新的业务模块（列表 + 详情 + 弹窗）。当用户说"加一个 xx 列表页"、"在项目里新增 xx 模块"、"按模板加 xx 业务页"、"按本套规范加 xx 管理页"、"新增一个 crud 页面"等时使用。生成模块四件套（api.ts / constants.tsx / use<Module>.ts / <Module>List.vue），自动接入 router、列表页复用 <hd-pro-table>，业务码统一走 axios 拦截器。
 user-invocable: true
 allowed-tools:
   - Bash
@@ -122,7 +122,7 @@ const handleEditSubmit = async (payload: PayloadType) => {
 
 调用本 skill 前，目标项目应当已经具备：
 
-1. `src/components/pro-table` 通用增强表格（含 search-form 集成、分页、刷新）
+1. `@rdeam/hd-ui` 已接入；没接先跑 `/vue-scaffold-hd-ui`
 2. `src/utils/request.ts` 拦截器收口（业务层 await 直接拿数据）
 3. `src/router/index.ts` 用 Layout 包业务页
 
@@ -481,7 +481,7 @@ export const use<Menu> = () => {
 
 ### Step 4 — \<EntityName\>List.vue
 
-template 部分用 `pro-table` + `search-form` 复合；script setup 仅做装配，不超过 50 行（见强制规则 5）。
+template 部分用 `<hd-pro-table>`（内集成查询区）；script setup 仅做装配，不超过 50 行（见强制规则 5）。
 
 **模板根节点规范（强制）**：
 
@@ -496,7 +496,7 @@ template 部分用 `pro-table` + `search-form` 复合；script setup 仅做装�
 ```vue
 <template>
   <div class="view-w h-full w-full">
-    <pro-table
+    <hd-pro-table
       ref="tableRef"
       :columns="columns"
       :form-controls="searchFormList"
@@ -507,7 +507,7 @@ template 部分用 `pro-table` + `search-form` 复合；script setup 仅做装�
       <template #tableHeader>
         <el-button type="primary" @click="handleCreate">新建</el-button>
       </template>
-    </pro-table>
+    </hd-pro-table>
   </div>
 
   <!-- ⬇️ 弹层组件挂在 view-w 同级，不要嵌进上面的 div -->
