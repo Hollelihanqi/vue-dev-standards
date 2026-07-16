@@ -55,6 +55,14 @@ cd E:\Dr\vue-dev-standards
 > `.bat` 已包装好 PowerShell 执行策略绕过，**双击 / cmd / PowerShell 都能直接跑**，不会被 ExecutionPolicy 拦截。
 > 链接方式用 `mklink /J`（Junction），无需管理员权限，无需开发者模式。
 
+只需要日报 skill 的同事，可以直接双击：
+
+```text
+scripts\setup-daily-work-report.bat
+```
+
+该脚本无需任何参数，只安装 `daily-work-report`，并默认同时配置 Claude Code 和 Codex。
+
 如果偏好直接调 PowerShell 也行（遇 ExecutionPolicy 报错时加 `powershell -ExecutionPolicy Bypass -File` 前缀）：
 ```powershell
 .\scripts\setup.ps1               # 不传参数：两个都配

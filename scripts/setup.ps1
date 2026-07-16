@@ -1,19 +1,33 @@
 ﻿param(
     [switch]$Claude,
-    [switch]$Codex
+    [switch]$Codex,
+    [string[]]$SkillName
 )
 
-# 不传任何参数时，默认两个都配
+$ErrorActionPreference = "Stop"
+
+# 不指定安装工具时，默认两个都配
 if (-not $Claude -and -not $Codex) {
     $Claude = $true
     $Codex = $true
-    Write-Host "未指定参数，默认配置 Claude Code + Codex CLI"
+    Write-Host "未指定安装工具，默认配置 Claude Code + Codex CLI"
     Write-Host "（如只想配一个，请显式传 -Claude 或 -Codex）"
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $skillsDir = Join-Path $repoRoot "skills"
-$skills = Get-ChildItem $skillsDir -Directory | Select-Object -ExpandProperty Name
+$availableSkills = Get-ChildItem $skillsDir -Directory | Select-Object -ExpandProperty Name
+
+if ($SkillName) {
+    $missingSkills = $SkillName | Where-Object { $_ -notin $availableSkills }
+    if ($missingSkills) {
+        throw "找不到 skill：$($missingSkills -join ', ')"
+    }
+    $skills = $SkillName | Select-Object -Unique
+}
+else {
+    $skills = $availableSkills
+}
 
 function New-SkillJunction {
     param([string]$Link, [string]$Target)
